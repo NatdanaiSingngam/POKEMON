@@ -10,7 +10,7 @@ import './announcement.css';
 import './shop.css';
 import './roles.css';
 import { createBoard } from './board.js';
-import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, ZONES } from './game/data.js';
+import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, WATER_POKEMON, ZONES } from './game/data.js';
 import { badgeRequirement, saleValue, scoreBreakdown } from './game/engine.js';
 import { monArt } from './game/art.js';
 import { POKEDEX, pokemonPortrait } from './game/artwork.js';
@@ -162,7 +162,7 @@ function connect() {
 }
 function monCard(mon, selectable = false, badges = 0, role = null) {
   const data = POKEMON[mon.species];
-  return `<button class="monster-card ${mon.hp <= 0 ? 'fainted' : ''} ${selectedSale.has(mon.uid) ? 'selected' : ''}" ${selectable ? `data-sale="${esc(mon.uid)}"` : 'disabled'}><span class="mon-icon">${pokemonPortrait(mon.species)}</span><span><b>${esc(data.name)}</b><br>HP ${mon.hp}/${data.hp} · ⚔ ${data.power}<br>ขาย ${saleValue(mon, role)} เหรียญ<br>${badges < badgeRequirement(mon.species) ? `🔒 ต้องมีเหรียญตรา ${badgeRequirement(mon.species)} เหรียญจึงใช้สู้ได้` : esc(data.abilityText)}</span></button>`;
+  return `<button class="monster-card ${mon.hp <= 0 ? 'fainted' : ''} ${selectedSale.has(mon.uid) ? 'selected' : ''}" ${selectable ? `data-sale="${esc(mon.uid)}"` : 'disabled'}><span class="mon-icon">${pokemonPortrait(mon.species)}</span><span><b>${esc(data.name)}</b>${WATER_POKEMON.has(mon.species) ? ' · 💧 ธาตุน้ำ' : ''}<br>HP ${mon.hp}/${data.hp} · ⚔ ${data.power}<br>ขาย ${saleValue(mon, role)} เหรียญ<br>${badges < badgeRequirement(mon.species) ? `🔒 ต้องมีเหรียญตรา ${badgeRequirement(mon.species)} เหรียญจึงใช้สู้ได้` : esc(data.abilityText)}</span></button>`;
 }
 function playerHudHtml() {
   return state?.players?.map((p, i) => `<div class="hud-player hud-${i} ${state.turn === i && state.phase === 'playing' ? 'on-turn' : ''} ${p.done ? 'done' : ''}" style="--hud:${ROLES[p.role]?.color || '#75b78a'}"><div class="hud-photo">${pokemonPortrait(ROLES[p.role]?.starter, 'hud-portrait')}<strong>${esc(p.name)}</strong></div><div class="hud-meta"><span>${esc(ROLES[p.role]?.name || '')}</span><span>รอบ ${p.laps}/3 · ⭐ ${scoreBreakdown(p).total}</span></div><div class="hud-resources"><span class="hud-coin">🪙 ${p.coins}</span>${Object.entries(BALLS).map(([id]) => `<span class="hud-ball hud-ball-${id}">◉ ${p.balls[id]}</span>`).join('')}</div><div class="hud-team">${Array.from({ length: 6 }, (_, slot) => p.pokemon[slot] ? `<span class="hud-mon" title="${esc(POKEMON[p.pokemon[slot].species].name)}">${pokemonPortrait(p.pokemon[slot].species)}</span>` : '<span class="hud-mon empty">·</span>').join('')}</div></div>`).join('') || '';
@@ -198,7 +198,7 @@ function captureModalHtml() {
   return `<div class="encounter-shade"><section class="encounter-card" role="dialog" aria-modal="true" aria-label="จับ${esc(pokemon.name)}" style="--encounter-color:${zoneColor}">
     <div class="encounter-topline"><span>${legendary ? '✦ LEGENDARY' : 'WILD POKÉMON'}</span><span>${spectating ? `${esc(me.name)} พบโปเกมอน` : legendary ? 'ช่องทอง' : esc(ZONES[encounter.zone].name)} · ทีม ${me.pokemon.length}/6</span></div>
     <div class="encounter-art-panel">${pokemonPortrait(encounter.species, 'large')}<div class="encounter-spark spark-one">✦</div><div class="encounter-spark spark-two">✦</div></div>
-    <div class="encounter-name"><h2>${esc(pokemon.name)}</h2><span>#${String(POKEDEX[encounter.species]).padStart(3, '0')}</span></div>
+    <div class="encounter-name"><h2>${esc(pokemon.name)}${WATER_POKEMON.has(encounter.species) ? ' 💧' : ''}</h2><span>#${String(POKEDEX[encounter.species]).padStart(3, '0')}</span></div>
     <div class="encounter-stats"><span><b>HP</b> ${pokemon.hp}</span><span><b>⚔ พลังโจมตี</b> ${pokemon.power}</span><span><b>◉ ขาย</b> ${saleValue({ species: encounter.species, caughtZone: encounter.zone }, me.role)} เหรียญ</span></div>
     <p class="encounter-rule">${legendary ? 'ชนะการต่อสู้ก่อน แล้วทอยได้ 6 เท่านั้น · โบนัสบอลไม่มีผล' : `ทอยได้ ${threshold} ขึ้นไปเพื่อจับ ${esc(pokemon.name)} · โบนัสบอลช่วยเพิ่มแต้ม`}<br>ทอยจับไปแล้ว ${encounter.attempts || 0}/3 ครั้ง · พลาดครบ 3 ครั้งโปเกมอนจะหนี</p>
     ${full ? '<p class="encounter-full">ทีมเต็ม 6 ตัวแล้ว จับเพิ่มไม่ได้</p>' : ''}
@@ -226,7 +226,7 @@ function actionHtml() {
   if (state.phase === 'finished') {
     const winners = state.players.filter(p => state.result.winners.includes(p.id));
     const ranking = [...state.players].sort((a, b) => scoreBreakdown(b).total - scoreBreakdown(a).total);
-    return `<div class="card action-panel"><div class="action-kicker">GAME OVER · ครบ 3 รอบ</div><h2>🏆 ${winners.map(p => esc(p.name)).join(' และ ')} ชนะ!</h2><p>คะแนน = เงิน + เหรียญตรา (8/เหรียญ) + จับโปเกมอน (2/ตัว) + ตำนานเพิ่ม (6/ตัว) + เควส (4/เควส) + ชนะผู้เล่น (3/ครั้ง) + ชนะวายร้าย (2/ครั้ง)</p><div class="results-list">${ranking.map((p, i) => { const s = scoreBreakdown(p); return `<div class="result-row ${state.result.winners.includes(p.id) ? 'winner' : ''}"><b>${i + 1}. ${esc(p.name)}</b><strong>⭐ ${s.total}</strong><small>เงิน ${s.coins} · ตรา ${s.badges} · จับ ${s.catches} · ตำนาน ${s.legendary} · เควส ${s.quests} · สู้ผู้เล่น ${s.pvp} · วายร้าย ${s.villains}</small></div>`; }).join('')}</div><button class="btn primary block" data-ui="new">เริ่มเกมใหม่</button></div>`;
+    return `<div class="card action-panel"><div class="action-kicker">GAME OVER · ครบ 3 รอบ</div><h2>🏆 ${winners.map(p => esc(p.name)).join(' และ ')} ชนะ!</h2><p>คะแนน = เงิน + เหรียญตรา (8/เหรียญ) + จับโปเกมอน (2/ตัว) + ตำนานเพิ่ม (6/ตัว) + เควส (4/เควส) + ชนะผู้เล่น (3/ครั้ง) + ชนะวายร้าย (2/ครั้ง) · นักสะสมได้เพิ่ม 1 แต้มต่อชนิดที่จับเอง</p><div class="results-list">${ranking.map((p, i) => { const s = scoreBreakdown(p); return `<div class="result-row ${state.result.winners.includes(p.id) ? 'winner' : ''}"><b>${i + 1}. ${esc(p.name)}</b><strong>⭐ ${s.total}</strong><small>เงิน ${s.coins} · ตรา ${s.badges} · จับ ${s.catches} · ตำนาน ${s.legendary} · เควส ${s.quests} · สู้ผู้เล่น ${s.pvp} · วายร้าย ${s.villains}${s.collection ? ` · สะสม ${s.collection}` : ''}</small></div>`; }).join('')}</div><button class="btn primary block" data-ui="new">เริ่มเกมใหม่</button></div>`;
   }
   if (!me) return '<div class="card waiting">กำลังเข้าห้อง…</div>';
   let body = '';

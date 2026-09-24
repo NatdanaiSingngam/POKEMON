@@ -18,15 +18,15 @@ export const BALLS = {
 };
 
 export const ROLES = {
-  trainer: { name: 'เทรนเนอร์', color: '#ed6475', starter: 'charmander', ability: 'จับโปเกมอนทั่วไป +1', effect: 'catch' },
-  fisher: { name: 'นักตกปลา', color: '#51ace8', starter: 'magikarp', ability: 'ขายโปเกมอนที่จับในโซนฟ้า +2 เหรียญ', effect: 'blue_sale' },
+  trainer: { name: 'เทรนเนอร์', color: '#ed6475', starter: 'charmander', ability: 'โยนบอลครั้งแรกต่อการพบโปเกมอนทั่วไป +1', effect: 'catch' },
+  fisher: { name: 'นักตกปลา', color: '#51ace8', starter: 'magikarp', ability: 'ขายโปเกมอนธาตุน้ำได้เงินเพิ่ม 3 เหรียญ', effect: 'water_sale' },
   scientist: { name: 'นักวิทยาศาสตร์', color: '#a889e3', starter: 'squirtle', ability: 'โปเกบอลน้ำเงินและดำเพิ่มโบนัสอีก +1', effect: 'ball' },
-  rocket: { name: 'แก๊งร็อกเก็ต', color: '#373947', starter: 'rattata', ability: 'ชนะผู้เล่นอื่นได้เงินเพิ่มอีก 1 เหรียญ', effect: 'battle_coin' },
+  rocket: { name: 'แก๊งร็อกเก็ต', color: '#373947', starter: 'rattata', ability: 'ชนะผู้เล่นอื่นได้เงินเพิ่มอีก 2 เหรียญ', effect: 'battle_coin' },
   breeder: { name: 'นักเพาะพันธุ์', color: '#75b981', starter: 'bulbasaur', ability: 'เริ่มตาฟื้น HP ทั้งทีมตัวละ 1', effect: 'turn_heal' },
-  ranger: { name: 'เรนเจอร์', color: '#587f52', starter: 'sandshrew', ability: 'จับโปเกมอนโซนแดงได้โบนัส +2', effect: 'red_catch' },
+  ranger: { name: 'เรนเจอร์', color: '#587f52', starter: 'sandshrew', ability: 'จับโปเกมอนโซนม่วงและแดงได้โบนัส +1', effect: 'rare_catch' },
   merchant: { name: 'พ่อค้า', color: '#d39b4b', starter: 'meowth', ability: 'ขายโปเกมอนได้เพิ่มตัวละ 1 เหรียญ', effect: 'sale_bonus' },
   courier: { name: 'นักส่งของ', color: '#ee9254', starter: 'pidgey', ability: 'ทอยเดินได้โบนัส +1 ช่องทุกตา', effect: 'walk_bonus' },
-  collector: { name: 'นักสะสม', color: '#9b81cb', starter: 'eevee', ability: 'ผ่านจุดเริ่มต้นรับบอลน้ำเงินเพิ่ม 1 ลูก', effect: 'lap_ball' },
+  collector: { name: 'นักสะสม', color: '#9b81cb', starter: 'eevee', ability: 'ได้คะแนนเพิ่ม 1 แต้มต่อโปเกมอนต่างชนิดที่จับเอง', effect: 'collection_score' },
   battler: { name: 'นักสู้', color: '#cf6471', starter: 'machop', ability: 'โจมตีครั้งแรกในแต่ละศึกแรงขึ้น 1', effect: 'first_strike' },
 };
 
@@ -82,6 +82,9 @@ export const POKEMON = {
 export const POOLS = Object.fromEntries(['green', 'blue', 'purple', 'red', 'legendary'].map(zone => [
   zone, Object.keys(POKEMON).filter(key => POKEMON[key].zone === zone),
 ]));
+
+// Gen I Water-type species from PokéAPI type/water, including dual types.
+export const WATER_POKEMON = new Set('squirtle wartortle blastoise psyduck golduck poliwag poliwhirl poliwrath tentacool tentacruel slowpoke slowbro seel dewgong shellder cloyster krabby kingler horsea seadra goldeen seaking staryu starmie magikarp gyarados lapras vaporeon omanyte omastar kabuto kabutops'.split(' '));
 
 export const EVOLUTIONS = {
   bulbasaur: 'ivysaur', ivysaur: 'venusaur', charmander: 'charmeleon', charmeleon: 'charizard',
