@@ -34,21 +34,21 @@ test('each turn starts with one item, and a full hand resolves before rolling', 
   const game = createGame(people, fixed(1));
   assert.equal(game.players[0].items.length, 1);
   assert.equal(game.step, 'roll');
-  game.players[1].items = ['lucky_coin', 'potion', 'shield', 'smoke'];
+  game.players[1].items = ['lucky_coin', 'potion', 'shield', 'smoke', 'power_up', 'full_heal'];
   run(game, 'p0', { type: 'roll' }, 1);
   assert.equal(game.step, 'capture');
   run(game, 'p0', { type: 'skipCapture' }, 1);
   assert.equal(game.turn, 1);
   assert.equal(game.step, 'item_overflow');
   assert.equal(game.pending.source, 'turn');
-  assert.equal(game.players[1].items.length, 4);
+  assert.equal(game.players[1].items.length, 6);
   const drawn = game.pending.itemId;
   assert.ok(ITEMS[drawn]);
   run(game, 'p1', { type: 'overflow', replaceIndex: 0 }, 1);
   assert.equal(game.turn, 1);
   assert.equal(game.step, 'roll');
   assert.equal(game.players[1].items[0], drawn);
-  assert.equal(game.players[1].items.length, 4);
+  assert.equal(game.players[1].items.length, 6);
   run(game, 'p1', { type: 'roll' }, 1);
   assert.notEqual(game.step, 'item_overflow');
 });
@@ -232,6 +232,6 @@ test('many randomized full games finish with legal money and roster limits', () 
       actions++;
     }
     assert.equal(game.phase, 'finished', `seed ${seed} did not finish`);
-    assert.ok(game.players.every(p => p.coins >= 0 && p.pokemon.length <= 6 && p.items.length <= 4));
+    assert.ok(game.players.every(p => p.coins >= 0 && p.pokemon.length <= 6 && p.items.length <= 6));
   }
 });

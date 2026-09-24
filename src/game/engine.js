@@ -387,7 +387,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       log(game, `${p.name} ซื้อโปเกบอล ราคา ${entry.price} เหรียญ`);
     } else if (ITEMS[action.id]) {
       const entry = ITEMS[action.id];
-      if (p.items.length >= MAX_ITEMS) return fail('ไอเทมเต็ม 4 ใบ');
+      if (p.items.length >= MAX_ITEMS) return fail(`ไอเทมเต็ม ${MAX_ITEMS} ใบ`);
       if (p.coins < entry.price) return fail('เงินไม่พอ');
       p.coins -= entry.price; p.items.push(action.id);
       log(game, `${p.name} ซื้อการ์ดไอเทม 1 ใบ ราคา ${entry.price} เหรียญ`);

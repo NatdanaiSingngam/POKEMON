@@ -8,7 +8,7 @@ import './game-layout.css';
 import './battle.css';
 import './announcement.css';
 import { createBoard } from './board.js';
-import { BALLS, EVOLUTIONS, ITEMS, POKEMON, QUESTS, ROLES, ZONES } from './game/data.js';
+import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, ZONES } from './game/data.js';
 import { badgeRequirement } from './game/engine.js';
 import { monArt } from './game/art.js';
 import { POKEDEX, pokemonPortrait } from './game/artwork.js';
@@ -23,19 +23,27 @@ if (params.get('room') && params.get('room').toUpperCase() !== remembered?.code)
 let name = localStorage.getItem('pokemon-board-name') || '';
 let suspense = null;
 let arrivalPending = false;
+let arrivalPlayerId = null;
+let arrivalCheckScheduled = false;
 let openDetails = null;
 let heartbeatTimer;
 let dismissedAnnouncementId = 0;
 
 function waitForArrival() {
-  if (!arrivalPending) return;
-  if (board.isMoving(playerId)) { requestAnimationFrame(waitForArrival); return; }
+  if (!arrivalPending) { arrivalCheckScheduled = false; return; }
+  if (board.isMoving(arrivalPlayerId)) { requestAnimationFrame(waitForArrival); return; }
   arrivalPending = false;
+  arrivalPlayerId = null;
+  arrivalCheckScheduled = false;
   render();
 }
 
 function applyState(next, roomCode) {
-  state = next; code = roomCode; selectedSale.clear(); board.sync(state); render();
+  state = next; code = roomCode; selectedSale.clear(); board.sync(state);
+  arrivalPlayerId = state?.step === 'capture' ? state.players[state.turn]?.id : null;
+  arrivalPending = Boolean(arrivalPlayerId && board.isMoving(arrivalPlayerId));
+  render();
+  if (arrivalPending && !arrivalCheckScheduled) { arrivalCheckScheduled = true; requestAnimationFrame(waitForArrival); }
 }
 function suspenseValue(next, kind) {
   if (kind === 'catch') return next.lastCatch?.playerId === playerId ? next.lastCatch.value : null;
@@ -57,13 +65,10 @@ function finishSuspense() {
   if (!suspense) return;
   clearInterval(suspense.interval); clearTimeout(suspense.timer); clearTimeout(suspense.watchdog);
   const latest = suspense.latest;
-  const kind = suspense.kind;
   suspense = null;
   $('rollOverlay').innerHTML = '';
   if (latest) {
-    arrivalPending = kind === 'move' && latest.state.step === 'capture' && latest.state.players[latest.state.turn]?.id === playerId;
     applyState(latest.state, latest.code);
-    if (arrivalPending) requestAnimationFrame(waitForArrival);
   }
 }
 function revealSuspense() {
@@ -202,12 +207,12 @@ function actionHtml() {
   } else if (state.step === 'wild_choice') body = `<p>มี ${esc(state.players.find(other => other.id === state.pending.opponentId)?.name)} อยู่บนช่องมอนสเตอร์ป่า คุณเลือกจับหรือท้าสู้ได้ อีกฝ่ายปฏิเสธการสู้ไม่ได้</p><div class="button-row"><button class="btn primary" data-choice="catch">จับมอนสเตอร์ป่า</button><button class="btn red" data-choice="battle">ท้าสู้ · ชนะ +3</button></div>`;
   else if (state.step === 'capture') body = arrivalPending ? '<p class="waiting">กำลังเดินไปยังช่องโปเกมอน…</p>' : '<p class="waiting">การ์ดจับโปเกมอนเปิดอยู่กลางจอ</p>';
   else if (state.step === 'event_result') body = `<p>เหตุการณ์: ${esc(state.notice?.title || '')}</p><button class="btn primary block" data-act="ackEvent">รับทราบ · จบตา</button>`;
-else if (state.step === 'shop') body = `<p>เมืองฟื้น HP ให้ทั้งทีมแล้ว ซื้อบอลหรือการ์ดได้ตามต้องการ</p><div class="shop-grid">${Object.entries(BALLS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price ? 'disabled' : ''}>◉ ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><div class="mini-section">การ์ดไอเทม · ${me.items.length}/4</div><div class="shop-grid">${Object.entries(ITEMS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price || me.items.length >= 4 ? 'disabled' : ''}>${item.icon} ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><button class="btn primary block" data-act="leaveShop">ออกจากเมือง</button>`;
+else if (state.step === 'shop') body = `<p>เมืองฟื้น HP ให้ทั้งทีมแล้ว ซื้อบอลหรือการ์ดได้ตามต้องการ</p><div class="shop-grid">${Object.entries(BALLS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price ? 'disabled' : ''}>◉ ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><div class="mini-section">การ์ดไอเทม · ${me.items.length}/${MAX_ITEMS}</div><div class="shop-grid">${Object.entries(ITEMS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price || me.items.length >= MAX_ITEMS ? 'disabled' : ''}>${item.icon} ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><button class="btn primary block" data-act="leaveShop">ออกจากเมือง</button>`;
   else if (state.step === 'quest_choice') {
     const quest = QUESTS[state.pending.questId];
     body = `<p>เควสใหม่: <b>${quest.name}</b><br>${quest.text}<br>รางวัล ${quest.coins} เหรียญ และ ${quest.reward === 'item' ? 'การ์ดไอเทม 1 ใบ' : 'โปเกมอน 1 ตัว'}</p>${me.quest ? '<p>มีเควสอยู่แล้ว เลือกเก็บอันเดิมหรือแทนที่</p>' : ''}<div class="button-row"><button class="btn primary" data-quest="accept">${me.quest ? 'รับแทนเควสเดิม' : 'รับเควส'}</button><button class="btn" data-quest="${me.quest ? 'keep' : 'skip'}">${me.quest ? 'เก็บเควสเดิม' : 'ไม่รับ'}</button></div>`;
   } else if (state.step === 'evolve_choice') body = `<p>ชนะวายร้าย รับ 5 เหรียญ! เลือกโปเกมอน 1 ตัวเพื่อพัฒนาร่าง HP จะฟื้นเต็ม</p><div class="monster-grid">${me.pokemon.filter(mon => EVOLUTIONS[mon.species]).map(mon => `<button class="monster-card" data-evolve="${mon.uid}">${pokemonPortrait(mon.species)}<span>${POKEMON[mon.species].name} → ${POKEMON[EVOLUTIONS[mon.species]].name}</span></button>`).join('')}</div><button class="btn block" data-act="evolve">ข้ามการพัฒนาร่าง</button>`;
-  else if (state.step === 'item_overflow') body = `<p>${state.pending.source === 'turn' ? 'เริ่มตาใหม่ · จั่วได้' : 'คุณได้'} ${ITEMS[state.pending.itemId].name} แต่มีการ์ดครบ 4 ใบแล้ว เลือกใบที่จะเปลี่ยนหรือทิ้งใบใหม่${state.pending.source === 'turn' ? ' แล้วจึงทอยเต๋า' : ''}</p>${me.items.map((id, i) => `<button class="btn block" data-overflow="${i}">เปลี่ยน ${ITEMS[id].name}</button>`).join('')}<button class="btn block" data-act="overflow">ทิ้งใบใหม่</button>`;
+  else if (state.step === 'item_overflow') body = `<p>${state.pending.source === 'turn' ? 'เริ่มตาใหม่ · จั่วได้' : 'คุณได้'} ${ITEMS[state.pending.itemId].name} แต่มีการ์ดครบ ${MAX_ITEMS} ใบแล้ว เลือกใบที่จะเปลี่ยนหรือทิ้งใบใหม่${state.pending.source === 'turn' ? ' แล้วจึงทอยเต๋า' : ''}</p>${me.items.map((id, i) => `<button class="btn block" data-overflow="${i}">เปลี่ยน ${ITEMS[id].name}</button>`).join('')}<button class="btn block" data-act="overflow">ทิ้งใบใหม่</button>`;
   else body = '<p>กำลังดำเนินเกม…</p>';
   return `<div class="card action-panel"><div class="action-kicker">${state.step.includes('battle') ? 'BATTLE' : mine ? 'YOUR TURN' : 'TURN IN PROGRESS'}</div><h2>${state.step.includes('battle') ? 'การต่อสู้' : mine ? esc(me.name) : esc(p.name)}</h2>${body}</div>`;
 }
@@ -215,7 +220,7 @@ function itemDockHtml() {
   const me = state.players.find(p => p.id === playerId);
   if (!me || state.phase !== 'playing') return '';
   const battle = state.step === 'battle_roll' && state.battle?.sides.includes(playerId);
-  return `<div class="hand-heading"><strong>การ์ดไอเทม</strong><span>${me.items.length}/4</span></div><div class="hand-cards">${itemList(me, battle)}</div>`;
+  return `<div class="hand-heading"><strong>การ์ดไอเทม</strong><span>${me.items.length}/${MAX_ITEMS}</span></div><div class="hand-cards">${itemList(me, battle)}</div>`;
 }
 function battleOverlayHtml() {
   const battle = state?.battle;
@@ -262,7 +267,7 @@ function render() {
     const showAction = state.phase === 'finished' || (actor?.id === playerId && state.step !== 'capture') || battleParticipant;
     $('actionDock').innerHTML = showAction ? actionHtml() : '';
     $('itemDock').innerHTML = itemDockHtml();
-    $('itemDock').className = `hand-size-${Math.max(1, Math.min(4, state.players.find(p => p.id === playerId)?.items.length || 0))}`;
+    $('itemDock').className = `hand-size-${Math.max(1, Math.min(MAX_ITEMS, state.players.find(p => p.id === playerId)?.items.length || 0))}`;
     $('detailsDock').innerHTML = detailsDockHtml();
   }
 }
