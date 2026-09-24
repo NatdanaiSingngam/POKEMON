@@ -31,7 +31,6 @@ let arrivalPlayerId = null;
 let arrivalCheckScheduled = false;
 let openDetails = null;
 let heartbeatTimer;
-let dismissedAnnouncementId = 0;
 let announcementQueue = [];
 let activeAnnouncement = null;
 let announcementTimer = null;
@@ -40,8 +39,12 @@ let seenAnnouncementId = 0;
 function advanceAnnouncement() {
   clearTimeout(announcementTimer);
   activeAnnouncement = announcementQueue.shift() || null;
-  if (activeAnnouncement && ['item', 'battleRoll'].includes(activeAnnouncement.kind)) {
-    announcementTimer = setTimeout(() => { activeAnnouncement = null; advanceAnnouncement(); render(); }, activeAnnouncement.kind === 'item' ? 1800 : 2100);
+  if (activeAnnouncement) {
+    const delay = { item: 1800, battleRoll: 2000, catch: 2300, battle: 2600, quest: 3100, event: 3200, cave: 2600 }[activeAnnouncement.kind] || 2400;
+    announcementTimer = setTimeout(() => {
+      if (activeAnnouncement?.kind === 'event' && state?.step === 'event_result' && state.notice?.id === activeAnnouncement.noticeId && state.players[state.turn]?.id === playerId) act({ type: 'ackEvent' });
+      activeAnnouncement = null; advanceAnnouncement(); render();
+    }, delay);
   }
 }
 function collectAnnouncements(next) {
@@ -204,7 +207,7 @@ function captureModalHtml() {
 }
 function announcementHtml() {
   if (!state || state.phase !== 'playing') return '';
-  const announcement = activeAnnouncement || (state.notice?.kind === 'cave' && state.notice.id > dismissedAnnouncementId ? state.notice : null);
+  const announcement = activeAnnouncement;
   if (!announcement) return '';
   if (announcement.kind === 'catch' && arrivalPending) return '';
   const isBattle = announcement.kind === 'battle';
@@ -213,8 +216,7 @@ function announcementHtml() {
   const title = isBattle ? won ? 'ชนะการต่อสู้!' : lost ? 'แพ้การต่อสู้' : announcement.title : announcement.title;
   const labels = { battle: 'BATTLE RESULT', battleRoll: 'BATTLE DICE', catch: 'CATCH RESULT', quest: 'QUEST', event: 'RANDOM EVENT', item: 'ITEM CARD', cave: 'BOARD EVENT' };
   const icons = { battle: won ? '🏆' : lost ? '⚔' : '🏅', battleRoll: '🎲', catch: announcement.success ? '◉' : '◇', quest: '📜', event: '✦', item: '✦', cave: '◆' };
-  const canAck = announcement.kind === 'event' && state.step === 'event_result' && state.players[state.turn]?.id === playerId && state.notice?.id === announcement.noticeId;
-  return `<div class="announcement-shade"><section class="announcement-card announcement-kind-${announcement.kind} ${isBattle ? won ? 'announcement-win' : lost ? 'announcement-lose' : '' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="eyebrow">${labels[announcement.kind] || 'BOARD EVENT'}</div><div class="announcement-icon">${icons[announcement.kind] || '✦'}</div>${announcement.species ? `<div class="announcement-pokemon">${pokemonPortrait(announcement.species)}</div>` : ''}${announcement.itemId ? `<div class="announcement-item-art">${esc(ITEMS[announcement.itemId]?.icon || '✦')}</div>` : ''}<h2>${esc(title)}</h2><p>${esc(announcement.text)}${announcement.targetName ? ` · เป้าหมาย ${esc(announcement.targetName)}` : ''}</p><button class="btn primary block" data-ui="dismiss-announcement" ${canAck ? 'data-act="ackEvent"' : ''}>รับทราบ</button></section></div>`;
+  return `<div class="announcement-shade"><section class="announcement-card announcement-kind-${announcement.kind} ${isBattle ? won ? 'announcement-win' : lost ? 'announcement-lose' : '' : ''}" role="status" aria-label="${esc(title)}"><div class="eyebrow">${labels[announcement.kind] || 'BOARD EVENT'}</div><div class="announcement-icon">${icons[announcement.kind] || '✦'}</div>${announcement.species ? `<div class="announcement-pokemon">${pokemonPortrait(announcement.species)}</div>` : ''}${announcement.itemId ? `<div class="announcement-item-art">${esc(ITEMS[announcement.itemId]?.icon || '✦')}</div>` : ''}<h2>${esc(title)}</h2><p>${esc(announcement.text)}${announcement.targetName ? ` · เป้าหมาย ${esc(announcement.targetName)}` : ''}</p></section></div>`;
 }
 function actionHtml() {
   const me = state.players.find(p => p.id === playerId);
@@ -330,7 +332,6 @@ document.addEventListener('click', event => {
   else if (ui === 'start') send('start');
   else if (ui === 'team' || ui === 'log' || ui === 'quest') { openDetails = openDetails === ui ? null : ui; render(); }
   else if (ui === 'new') { localStorage.removeItem('pokemon-board-session'); location.href = location.pathname; }
-  else if (ui === 'dismiss-announcement') { dismissedAnnouncementId = Math.max(dismissedAnnouncementId, activeAnnouncement?.id || 0, state?.notice?.id || 0); activeAnnouncement = null; advanceAnnouncement(); render(); }
   else if (ui === 'skip-sale') act({ type: 'sell', ids: [] });
   if (button.dataset.role) send('role', { role: button.dataset.role });
   if (button.dataset.act) act({ type: button.dataset.act, ...(button.dataset.act === 'sell' ? { ids: [...selectedSale] } : {}) });

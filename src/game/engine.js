@@ -168,6 +168,7 @@ function resolveTile(game, rng) {
   } else if (tile.type === 'cave') {
     p.caveTurns = 3;
     game.notice = { id: game.serial++, kind: 'cave', title: 'ติดอยู่ในถ้ำ!', text: `${p.name} ต้องข้าม 3 ตา` };
+    announce(game, 'cave', `${p.name} ติดอยู่ในถ้ำ!`, 'ต้องข้าม 3 ตา');
     log(game, `${p.name} ลงถ้ำพอดี ต้องข้าม 3 ตา`); endTurn(game, rng);
   } else if (tile.type === 'gym' || tile.type === 'villain') {
     offerNpcBattle(game, rng, tile.type);
@@ -196,7 +197,7 @@ function resolveTile(game, rng) {
       else { game.step = 'item_overflow'; game.pending = { kind: 'item', itemId }; return; }
     }
     if (event.kind === 'legendary') { offerLegendary(game, rng); return; }
-    game.step = 'event_result';
+    endTurn(game, rng);
   } else if (tile.type === 'legendary') offerLegendary(game, rng);
   else endTurn(game, rng);
 }
