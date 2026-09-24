@@ -436,11 +436,9 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       const candyTarget = itemId === 'rare_candy' ? p.pokemon.find(mon => mon.uid === action.targetId && EVOLUTIONS[mon.species]) : null;
       if (itemId === 'rare_candy' && !candyTarget) return fail('เลือกโปเกมอนที่พัฒนาร่างได้');
       if (itemId === 'lucky_coin') p.coins += 3;
-      if (itemId === 'pickpocket') { const amount = Math.min(2, target.coins); target.coins -= amount; p.coins += amount; }
       if (itemId === 'full_heal') healTeam(p);
       if (candyTarget) { candyTarget.species = EVOLUTIONS[candyTarget.species]; candyTarget.hp = POKEMON[candyTarget.species].hp; }
       if (itemId === 'ball_box') p.balls.basic += 3;
-      if (itemId === 'tax_notice') target.coins = Math.max(0, target.coins - 2);
       if (item.effect === 'coins') p.coins += item.amount;
       if (item.effect === 'balls') p.balls.basic += item.amount;
       if (item.effect === 'greatBall') p.balls.great += item.amount;

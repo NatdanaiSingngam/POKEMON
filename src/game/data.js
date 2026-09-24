@@ -96,10 +96,10 @@ export const QUESTS = {
 
 export const ITEMS = {
   lucky_coin: { name: 'เหรียญนำโชค', icon: '✦', timing: 'outside', target: 'self', price: 4, text: 'รับเงิน 3 เหรียญ' },
-  pickpocket: { name: 'มือไว', icon: '✋', timing: 'outside', target: 'other', price: 4, text: 'รับเงินจากคู่แข่งไม่เกิน 2 เหรียญ' },
+  pickpocket: { name: 'มือไว', icon: '✋', timing: 'outside', target: 'other', price: 4, effect: 'steal', amount: 5, text: 'รับเงินจากคู่แข่งสูงสุด 5 เหรียญ' },
   full_heal: { name: 'ยาฟื้นทีม', icon: '✚', timing: 'outside', target: 'self', price: 2, text: 'ฟื้น HP โปเกมอนทั้งทีมจนเต็ม' },
   ball_box: { name: 'กล่องโปเกบอล', icon: '◉', timing: 'outside', target: 'self', price: 3, text: 'รับบอลแดง 3 ลูก' },
-  tax_notice: { name: 'ใบเรียกเก็บ', icon: '▧', timing: 'outside', target: 'other', price: 3, text: 'คู่แข่งเสียเงิน 2 เหรียญ' },
+  tax_notice: { name: 'ใบเรียกเก็บ', icon: '▧', timing: 'outside', target: 'other', price: 3, effect: 'fine', amount: 6, text: 'คู่แข่งเสียเงินสูงสุด 6 เหรียญ' },
   potion: { name: 'ยารักษา', icon: '✚', timing: 'battle', target: 'self', price: 1, text: 'ฟื้น HP ตัวที่สู้ 3 หน่วย' },
   super_potion: { name: 'ยารักษาขั้นสูง', icon: '✚', timing: 'battle', target: 'self', price: 2, text: 'ฟื้น HP ตัวที่สู้ 6 หน่วย' },
   repel: { name: 'รีเพล', icon: '↗', timing: 'outside', target: 'self', price: 1, move: 2, text: 'ทอยเต๋าแล้วเดินเพิ่ม 2 ช่อง' },
@@ -127,9 +127,9 @@ export const ITEMS = {
   scooter: { name: 'สกูตเตอร์มือสอง', icon: '↗', timing: 'outside', target: 'self', move: 3, text: 'ทอยเต๋าแล้วเดินเพิ่ม 3 ช่อง' },
   roller_skates: { name: 'โรลเลอร์สเกต', icon: '↗', timing: 'outside', target: 'self', move: 4, text: 'ทอยเต๋าแล้วเดินเพิ่ม 4 ช่อง' },
   turbo_boost: { name: 'เทอร์โบบูสต์', icon: '↗', timing: 'outside', target: 'self', move: 5, text: 'ทอยเต๋าแล้วเดินเพิ่ม 5 ช่อง' },
-  prank_fine: { name: 'ใบสั่งปลอม', icon: '▧', timing: 'outside', target: 'other', effect: 'fine', amount: 1, text: 'คู่แข่งเสีย 1 เหรียญ' },
-  snack_tax: { name: 'ภาษีขนม', icon: '▧', timing: 'outside', target: 'other', effect: 'steal', amount: 1, text: 'รับเงินจากคู่แข่งสูงสุด 1 เหรียญ' },
-  parking_ticket: { name: 'ค่าจอดจักรยาน', icon: '▧', timing: 'outside', target: 'other', effect: 'fine', amount: 3, text: 'คู่แข่งเสียไม่เกิน 3 เหรียญ' },
+  prank_fine: { name: 'ใบสั่งปลอม', icon: '▧', timing: 'outside', target: 'other', effect: 'fine', amount: 4, text: 'คู่แข่งเสียเงินสูงสุด 4 เหรียญ' },
+  snack_tax: { name: 'ภาษีขนม', icon: '▧', timing: 'outside', target: 'other', effect: 'steal', amount: 3, text: 'รับเงินจากคู่แข่งสูงสุด 3 เหรียญ' },
+  parking_ticket: { name: 'ค่าจอดจักรยาน', icon: '▧', timing: 'outside', target: 'other', effect: 'fine', amount: 8, text: 'คู่แข่งเสียเงินสูงสุด 8 เหรียญ' },
 };
 export const SHOP_ITEMS = ['potion', 'super_potion', 'repel', 'super_repel', 'full_heal', 'rare_candy', 'bicycle'];
 export const DRAW_ITEMS = Object.keys(ITEMS).filter(itemId => !SHOP_ITEMS.includes(itemId));
