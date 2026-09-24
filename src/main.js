@@ -9,8 +9,9 @@ import './battle.css';
 import './announcement.css';
 import './shop.css';
 import './roles.css';
+import './gauge.css';
 import { createBoard } from './board.js';
-import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, WATER_POKEMON, ZONES } from './game/data.js';
+import { BALLS, DICE_UPGRADE_COSTS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, TILES, WATER_POKEMON, ZONES } from './game/data.js';
 import { badgeRequirement, saleValue, scoreBreakdown } from './game/engine.js';
 import { monArt } from './game/art.js';
 import { POKEDEX, pokemonPortrait } from './game/artwork.js';
@@ -35,6 +36,35 @@ let announcementQueue = [];
 let activeAnnouncement = null;
 let announcementTimer = null;
 let seenAnnouncementId = 0;
+let moveGauge = null;
+function gaugeValue(now) {
+  const phase = ((now - moveGauge.started) % 2400) / 1200;
+  return phase <= 1 ? phase : 2 - phase;
+}
+function paintGauge() {
+  if (!moveGauge) return;
+  const value = gaugeValue(performance.now());
+  const target = Math.min(6, Math.floor(value * 6) + 1);
+  const fill = document.querySelector('.move-gauge-fill');
+  const label = document.querySelector('.move-gauge-target');
+  if (fill) fill.style.width = `${value * 100}%`;
+  if (label) label.textContent = `เล็ง ${target} ช่อง`;
+  const destination = document.querySelector('.move-gauge-destination');
+  if (destination && state) {
+    const me = state.players[state.turn];
+    const steps = target + (me.moveBonus || 0) + (me.role === 'courier' ? 1 : 0);
+    const index = me.position + steps >= TILES.length ? 0 : me.position + steps;
+    destination.textContent = `ถ้าตรงเป้า → ${TILES[index].label} (ช่อง ${index + 1})`;
+  }
+  moveGauge.frame = requestAnimationFrame(paintGauge);
+}
+function stopMoveGauge() {
+  if (!moveGauge) return;
+  const value = gaugeValue(performance.now());
+  cancelAnimationFrame(moveGauge.frame);
+  moveGauge = null;
+  if (beginSuspense('move')) act({ type: 'roll', gauge: value });
+}
 
 function advanceAnnouncement() {
   clearTimeout(announcementTimer);
@@ -183,7 +213,10 @@ function shopHtml() {
   const ballSprites = { basic: 'poke-ball', great: 'great-ball', ultra: 'ultra-ball' };
   const balls = Object.entries(BALLS).map(([id, ball]) => `<button class="shop-ball" data-buy="${id}" ${me.coins < ball.price ? 'disabled' : ''} aria-label="ซื้อ${esc(ball.name)} ${ball.price} เหรียญ"><img src="/shop-icons/${ballSprites[id]}.png" alt=""><span>${esc(ball.name)}</span><b>🪙 ${ball.price}</b></button>`).join('');
   const items = SHOP_ITEMS.map(id => { const item = ITEMS[id]; return `<button class="shop-card" data-buy="${id}" ${me.coins < item.price || me.items.length >= MAX_ITEMS ? 'disabled' : ''} aria-label="ซื้อ${esc(item.name)} ${item.price} เหรียญ"><span class="shop-card-title">${esc(id.replaceAll('_', ' ').toUpperCase())}</span><img src="/shop-icons/${id.replaceAll('_', '-')}.png" alt=""><span class="shop-card-text">${esc(item.text)}</span><b>🪙 ${item.price}</b></button>`; }).join('');
-  return `<div class="shop-shade"><section class="shop-panel" role="dialog" aria-modal="true" aria-label="ร้านค้าโปเกมอน"><div class="shop-header"><div><small>POKÉ MART</small><h2>ร้านค้า</h2></div><strong>🪙 ${me.coins}</strong></div><div class="shop-grid-pixel">${balls}${items}</div><p class="shop-limit">การ์ดไอเทม ${me.items.length}/${MAX_ITEMS} · กดการ์ดเพื่อซื้อ</p><button class="btn shop-exit" data-act="leaveShop">ออกจากร้านค้า</button></section></div>`;
+  const level = me.diceLevel || 0;
+  const price = DICE_UPGRADE_COSTS[level];
+  const diceShop = `<div class="dice-shop"><div><strong>🎲 เต๋าเดิน ระดับ ${level}/3</strong><small>เล็งแต้มตรงเป้า ${[40, 55, 70, 85][level]}% · ใช้เฉพาะการเดิน</small></div>${price ? `<button class="btn gold" data-buy="dice_upgrade" ${me.coins < price ? 'disabled' : ''}>อัปเกรด ${price} เหรียญ</button>` : '<b>ระดับสูงสุด</b>'}</div>`;
+  return `<div class="shop-shade"><section class="shop-panel" role="dialog" aria-modal="true" aria-label="ร้านค้าโปเกมอน"><div class="shop-header"><div><small>POKÉ MART</small><h2>ร้านค้า</h2></div><strong>🪙 ${me.coins}</strong></div><div class="shop-grid-pixel">${balls}${items}</div>${diceShop}<p class="shop-limit">การ์ดไอเทม ${me.items.length}/${MAX_ITEMS} · กดการ์ดเพื่อซื้อ</p><button class="btn shop-exit" data-act="leaveShop">ออกจากร้านค้า</button></section></div>`;
 }
 function captureModalHtml() {
   if (arrivalPending || state?.phase !== 'playing' || state.step !== 'capture') return '';
@@ -238,7 +271,7 @@ function actionHtml() {
   } else if (!mine) body = `<p class="waiting">รอ ${esc(p.name)} เล่นอยู่…</p>`;
   else if (state.step === 'roll') {
     const bonus = (me.moveBonus || 0) + (me.role === 'courier' ? 1 : 0);
-    body = `<p>ถึงตาคุณแล้ว ทอยเต๋าเพื่อเดินบนกระดาน</p>${bonus ? `<p>โบนัสเดิน +${bonus} ช่อง</p>` : ''}${state.lastRoll ? `<div class="big-die">🎲 ${state.lastRoll.value}</div>` : ''}<button class="btn primary block" data-act="roll">ทอยเต๋า${bonus ? ` + ${bonus}` : ''}</button>`;
+    body = `<p>กดค้างแล้วปล่อยเพื่อเล็งแต้มเดิน 1–6</p><div class="move-gauge"><div class="move-gauge-track"><span class="move-gauge-fill"></span>${Array.from({length: 6}, (_, i) => `<span class="move-gauge-mark">${i + 1}</span>`).join('')}</div><strong class="move-gauge-target">เล็ง 1 ช่อง</strong><small class="move-gauge-destination">ถ้าตรงเป้า → ${TILES[Math.min(TILES.length - 1, me.position + 1 + bonus)].label}</small></div><p class="move-gauge-hint">เต๋าระดับ ${me.diceLevel || 0}/3 · ตรงเป้า ${[40, 55, 70, 85][me.diceLevel || 0]}%${bonus ? ` · โบนัสเดิน +${bonus}` : ''}<br>เต๋าสู้และเต๋าจับยังสุ่มตามเดิม</p><button class="btn primary block gauge-roll-button" data-gauge-roll="1">🎲 กดค้างเพื่อชาร์จเต๋า</button>`;
   }
   else if (state.step === 'sale') {
     const earned = me.pokemon.filter(mon => selectedSale.has(mon.uid)).reduce((sum, mon) => sum + saleValue(mon, me.role), 0);
@@ -290,6 +323,7 @@ function landingHtml() {
   return `<div class="modal"><div class="eyebrow">POKÉMON BOARD GAME</div><h1>${invited ? 'เพื่อนชวนเข้าห้อง' : 'ศึกยอดนักขาย'}</h1><p>${invited ? `ห้อง <b>${invited}</b> · ตั้งชื่อแล้วกดเข้าห้องเพื่อเล่นกับเพื่อน` : 'เกมกระดาน 3D สำหรับ 4 คน จับโปเกมอน ต่อสู้ ขายที่จุดเริ่มต้น ใครมีคะแนนรวมมากที่สุดหลังครบ 3 รอบชนะ'}</p><label class="field-label" for="playerName">ชื่อผู้เล่น</label><input id="playerName" class="field" maxlength="18" value="${esc(name)}" placeholder="ตั้งชื่อของคุณ">${invited ? `<input id="joinCode" type="hidden" value="${invited}"><button class="btn primary block" data-ui="join">เข้าห้อง ${invited}</button><button class="btn block" data-ui="home">กลับหน้าเริ่มเกม</button>` : `<div class="mode-row"><button class="btn primary" data-ui="solo">เล่นคนเดียวกับบอท</button><button class="btn gold" data-ui="create">สร้างห้องกับเพื่อน</button></div><label class="field-label" for="joinCode">รหัสห้องเพื่อน</label><div class="button-row"><input id="joinCode" class="field" style="flex:1" maxlength="6" placeholder="เช่น A1B2C3"><button class="btn" data-ui="join">เข้าห้อง</button></div>`}<div class="rule-note">บอร์ด 4 โซน: เขียว ≥2 · ฟ้า ≥3 · ม่วง ≥4 · แดง ≥5 · ตำนานชนะการสู้ก่อนแล้วทอย 6 · จับได้สูงสุด 3 ครั้งต่อการพบ</div></div>`;
 }
 function render() {
+  if (moveGauge && (state?.step !== 'roll' || state?.players[state.turn]?.id !== playerId)) { cancelAnimationFrame(moveGauge.frame); moveGauge = null; }
   const inBattle = state?.phase === 'playing' && ['battle_pick', 'battle_roll'].includes(state.step) && Boolean(state.battle);
   document.querySelector('.world-wrap').classList.toggle('in-battle', inBattle);
   $('battleOverlay').innerHTML = battleOverlayHtml();
@@ -311,6 +345,32 @@ function render() {
     $('detailsDock').innerHTML = detailsDockHtml();
   }
 }
+document.addEventListener('pointerdown', event => {
+  const button = event.target.closest('[data-gauge-roll]');
+  if (!button || moveGauge || suspense || button.disabled) return;
+  event.preventDefault();
+  button.setPointerCapture(event.pointerId);
+  moveGauge = { started: performance.now(), frame: null };
+  button.textContent = 'ปล่อยเพื่อทอย!';
+  paintGauge();
+});
+document.addEventListener('pointerup', event => {
+  if (event.target.closest('[data-gauge-roll]') && moveGauge) { event.preventDefault(); stopMoveGauge(); }
+});
+document.addEventListener('pointercancel', () => {
+  if (moveGauge) { cancelAnimationFrame(moveGauge.frame); moveGauge = null; render(); }
+});
+document.addEventListener('keydown', event => {
+  const button = event.target.closest?.('[data-gauge-roll]');
+  if (!button || ![' ', 'Enter'].includes(event.key) || event.repeat || moveGauge || suspense) return;
+  event.preventDefault();
+  moveGauge = { started: performance.now(), frame: null };
+  button.textContent = 'ปล่อยเพื่อทอย!';
+  paintGauge();
+});
+document.addEventListener('keyup', event => {
+  if (event.target.closest?.('[data-gauge-roll]') && [' ', 'Enter'].includes(event.key) && moveGauge) { event.preventDefault(); stopMoveGauge(); }
+});
 document.addEventListener('click', event => {
   const button = event.target.closest('button'); if (!button) return;
   if (suspense) return;

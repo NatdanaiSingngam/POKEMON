@@ -1,0 +1,12 @@
+.move-gauge { margin: 14px 0 8px; padding: 12px; border: 2px solid #294c55; border-radius: 12px; background: #f8f6df; box-shadow: 4px 4px 0 #294c55; }
+.move-gauge-track { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); height: 54px; overflow: hidden; border: 2px solid #294c55; border-radius: 7px; background: linear-gradient(90deg, #83d8a9, #b9dd8b, #f1db79, #f6ae6e, #ee7c78, #d96f9f); }
+.move-gauge-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: #fff8; border-right: 5px solid #253e4c; z-index: 1; pointer-events: none; }
+.move-gauge-mark { z-index: 2; display: grid; place-items: center; font-weight: 900; font-size: 19px; color: #233b45; border-right: 1px solid #294c5550; }
+.move-gauge-target { display: block; margin-top: 8px; text-align: center; font-size: 18px; }
+.move-gauge-destination { display: block; text-align: center; color: #48636a; }
+.move-gauge-hint { font-size: 12px; line-height: 1.5; color: #47636b; }
+.gauge-roll-button { touch-action: none; user-select: none; }
+.dice-shop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 2px; padding: 12px; background: #fffbe8; border: 2px solid #2c4c52; border-radius: 8px; }
+.dice-shop div { display: grid; gap: 3px; }
+.dice-shop small { color: #49646a; }
+@media (max-width: 600px) { .dice-shop { flex-direction: column; align-items: stretch; } }

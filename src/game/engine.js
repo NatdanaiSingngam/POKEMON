@@ -1,4 +1,4 @@
-import { BALLS, DRAW_ITEMS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, SHOP_ITEMS, TILES, WATER_POKEMON, ZONES } from './data.js';
+import { BALLS, DICE_UPGRADE_COSTS, DRAW_ITEMS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, SHOP_ITEMS, TILES, WATER_POKEMON, ZONES } from './data.js';
 
 const die = rng => Math.floor(rng() * 6) + 1;
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
@@ -13,7 +13,7 @@ export function createGame(participants, rng = Math.random) {
       connected: source.connected !== false, role, position: 0, laps: 0, done: false,
       coins: 10, balls: { basic: 5, great: 0, ultra: 0 },
       pokemon: [{ uid: `starter-${index}`, species, hp: POKEMON[species].hp, caughtZone: 'starter' }],
-      items: [], moveBonus: 0, badges: [], quest: null, caveTurns: 0,
+      items: [], moveBonus: 0, diceLevel: 0, badges: [], quest: null, caveTurns: 0,
       stats: { catches: 0, legendaryCatches: 0, quests: 0, pvpWins: 0, villainWins: 0, caughtSpecies: [] },
       seenPokemon: [species], recentPokemon: [],
     };
@@ -349,9 +349,20 @@ export function applyAction(game, actorId, action, rng = Math.random) {
 
   if (action.type === 'roll') {
     if (game.step !== 'roll') return fail('ตอนนี้ยังทอยไม่ได้');
-    const rolled = die(rng), bonus = (p.moveBonus || 0) + (p.role === 'courier' ? 1 : 0);
+    const gauge = Number(action.gauge);
+    if (!Number.isFinite(gauge) || gauge < 0 || gauge > 1) return fail('ค่าเกจเต๋าไม่ถูกต้อง');
+    const target = Math.min(6, Math.floor(gauge * 6) + 1);
+    const precision = [0.4, 0.55, 0.7, 0.85][Math.min(p.diceLevel || 0, 3)];
+    const chance = rng();
+    let rolled = target;
+    if (chance >= precision) {
+      if (chance >= precision + (1 - precision) * 0.8) rolled = die(rng);
+      else rolled = clamp(target + (target === 1 ? 1 : target === 6 ? -1 : rng() < 0.5 ? -1 : 1), 1, 6);
+    }
+    const bonus = (p.moveBonus || 0) + (p.role === 'courier' ? 1 : 0);
     p.moveBonus = 0;
     movePlayer(game, p, rolled + bonus, rng, 'die', rolled);
+    game.lastRoll.target = target;
   } else if (action.type === 'chooseQuest') {
     if (game.step !== 'quest_choice') return fail('ตอนนี้รับเควสไม่ได้');
     if (!['accept', 'keep', 'skip'].includes(action.choice)) return fail('ตัวเลือกเควสไม่ถูกต้อง');
@@ -454,7 +465,14 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     resolveBattleRolls(game, rng);
   } else if (action.type === 'buy') {
     if (game.step !== 'shop') return fail('ซื้อของได้เฉพาะในเมือง');
-    if (BALLS[action.id]) {
+    if (action.id === 'dice_upgrade') {
+      const level = p.diceLevel || 0;
+      if (level >= DICE_UPGRADE_COSTS.length) return fail('เต๋าอัปเกรดเต็มแล้ว');
+      const price = DICE_UPGRADE_COSTS[level];
+      if (p.coins < price) return fail('เงินไม่พอ');
+      p.coins -= price; p.diceLevel = level + 1;
+      log(game, `${p.name} อัปเกรดเต๋าเดินเป็นระดับ ${p.diceLevel} ราคา ${price} เหรียญ`);
+    } else if (BALLS[action.id]) {
       const entry = BALLS[action.id];
       if (p.coins < entry.price) return fail('เงินไม่พอ');
       p.coins -= entry.price; p.balls[action.id]++;
@@ -539,7 +557,20 @@ export function actionsForBot(game, rng = Math.random) {
     return side ? { actorId: side, action: { type: 'battleRoll' } } : null;
   }
   if (!p.bot) return null;
-  if (game.step === 'roll') return { actorId: p.id, action: { type: 'roll' } };
+  if (game.step === 'roll') {
+    const bonus = (p.moveBonus || 0) + (p.role === 'courier' ? 1 : 0);
+    const priorities = { city: 5, quest: 4, gym: 3, wild: 2, event: 2, cave: -8 };
+    const options = Array.from({ length: 6 }, (_, i) => i + 1);
+    options.sort((a, b) => {
+      const score = face => {
+        const index = (p.position + face + bonus) % TILES.length;
+        const tile = TILES[index];
+        return (priorities[tile.type] || 0) + face * 0.1 + (p.position + face + bonus >= TILES.length && p.pokemon.length > 1 ? 6 : 0);
+      };
+      return score(b) - score(a);
+    });
+    return { actorId: p.id, action: { type: 'roll', gauge: (options[0] - 0.5) / 6 } };
+  }
   if (game.step === 'sale') {
     const sorted = [...p.pokemon].sort((a, z) => POKEMON[z.species].power - POKEMON[a.species].power);
     const keep = p.laps < LAPS_TO_WIN ? sorted.slice(0, 1).map(mon => mon.uid) : [];

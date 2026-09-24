@@ -2,6 +2,7 @@ import { EXTRA_EVOLUTIONS, EXTRA_POKEMON } from './gen1-extra.js';
 
 export const MAX_POKEMON = 6;
 export const MAX_ITEMS = 6;
+export const DICE_UPGRADE_COSTS = [5, 9, 14];
 export const LAPS_TO_WIN = 3;
 
 export const ZONES = {
