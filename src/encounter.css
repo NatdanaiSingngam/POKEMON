@@ -1,0 +1,26 @@
+#encounterOverlay:empty{display:none}
+#encounterOverlay{position:fixed;inset:0;z-index:4;display:grid;place-items:center;padding:20px;pointer-events:none}
+.encounter-shade{position:absolute;inset:0;background:rgba(9,27,33,.65);backdrop-filter:blur(3px);pointer-events:auto}
+.encounter-card{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(94vw,460px);max-height:calc(100vh - 28px);overflow:auto;background:#fff9e9;border:4px solid #244950;border-top:9px solid var(--encounter-color);border-radius:16px;box-shadow:10px 10px 0 #102b31,0 25px 70px #071c2470;padding:18px 20px 20px;color:#233b42;pointer-events:auto;animation:encounter-appear .25s both}
+@keyframes encounter-appear{from{opacity:0;transform:translate(-50%,-47%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+.encounter-topline{display:flex;justify-content:space-between;gap:12px;align-items:center;color:#51716e;font:700 12px 'Chakra Petch',sans-serif;letter-spacing:1px}
+.encounter-topline span:first-child{color:#183e44}
+.encounter-art-panel{position:relative;height:230px;margin:13px 0 7px;display:grid;place-items:center;overflow:hidden;border:2px solid #c7d8bb;border-radius:12px;background:radial-gradient(circle at 50% 45%,#fffdf4 0 33%,#e8f4df 34% 62%,#d6ead0 63%);box-shadow:inset 0 -8px 0 #c2dabc}
+.encounter-art-panel:after{content:'';position:absolute;width:190px;height:20px;border-radius:50%;background:#45625627;bottom:17px;left:50%;transform:translateX(-50%)}
+.pokemon-portrait{position:relative;display:inline-grid;place-items:center;width:38px;height:38px;flex:none}
+.pokemon-pixel{position:absolute;inset:0;display:grid;place-items:center}
+.pokemon-pixel:has(+.pokemon-art){visibility:hidden}
+.pokemon-pixel svg{width:100%;height:100%;image-rendering:pixelated}
+.pokemon-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 7px 2px #294b3b24)}
+.pokemon-portrait.large{height:205px;width:205px;z-index:1;animation:portrait-float 3s ease-in-out infinite}
+.pokemon-portrait.large .pokemon-pixel{width:100%;height:100%}
+@keyframes portrait-float{50%{transform:translateY(-7px)}}
+.encounter-spark{position:absolute;color:#fff;filter:drop-shadow(0 1px 1px #739989);font-size:22px}.spark-one{top:27px;left:20%}.spark-two{right:17%;bottom:64px;font-size:15px}
+.encounter-name{display:flex;justify-content:space-between;align-items:baseline}.encounter-name h2{font:700 26px 'Chakra Petch',sans-serif;margin:0}.encounter-name span{color:#90a49e;font:700 15px 'Chakra Petch'}
+.encounter-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0}.encounter-stats span{background:#edf5e9;border:1px solid #c8dbcb;border-radius:6px;padding:6px;text-align:center;font-size:12px}.encounter-stats b{display:block;color:#407472;font-size:11px}
+.encounter-rule{margin:9px 0 11px;border-left:4px solid var(--encounter-color);background:#f0f2df;padding:8px 10px;line-height:1.35;font-size:13px}.encounter-full{color:#ab3d3d;font-weight:700;font-size:13px;margin:8px 0}
+.encounter-ball-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.encounter-ball{min-height:81px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:7px 4px}.encounter-ball strong{font-size:13px}.encounter-ball small{font-size:10px;line-height:1.25}.ball-symbol{font-size:21px;line-height:1;color:#ee615b}.ball-great{color:#4e9ed7}.ball-ultra{color:#2e3c47}
+.encounter-skip{width:100%;margin-top:10px;background:#fff;color:#5b6c6c}
+@media(max-width:520px){.encounter-card{padding:13px 14px}.encounter-art-panel{height:180px;margin:8px 0}.pokemon-portrait.large{width:163px;height:163px}.encounter-name h2{font-size:22px}.encounter-ball{min-height:70px}.encounter-rule{font-size:12px}}
+@media(max-height:690px){.encounter-art-panel{height:150px}.pokemon-portrait.large{width:140px;height:140px}.encounter-card{padding-top:9px;padding-bottom:11px}}
+@media(prefers-reduced-motion:reduce){.encounter-card,.pokemon-portrait.large{animation:none}}

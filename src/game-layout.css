@@ -1,0 +1,31 @@
+.layout{display:block;height:calc(100vh - 72px);min-height:620px}
+.world-wrap{height:100%;min-height:620px}
+.sidebar{display:none}
+.world-caption{display:none}
+.player-hud{z-index:3}
+.hud-player{display:block;width:166px;min-height:0;padding:5px;background:#fffdf1;border:4px solid #fff;border-radius:0;box-shadow:4px 5px 0 #1c363cbb,0 0 0 2px #304b4d;font-family:'Chakra Petch',sans-serif}
+.hud-0{top:14px;left:14px}.hud-1{top:14px;right:14px}.hud-2{bottom:15px;left:14px}.hud-3{bottom:15px;right:14px}
+.hud-player.on-turn{background:#fffdf1;border-color:#fff;outline:3px solid #f4d257;box-shadow:0 0 0 5px #3f7771,4px 5px 0 #1c363cbb}
+.hud-photo{height:99px;position:relative;overflow:hidden;background:linear-gradient(135deg,#d9e5dc,#f6f4e4);border:2px solid #d7dfd1}
+.hud-photo .pokemon-portrait.hud-portrait{width:100%;height:100%}.hud-photo .pokemon-art{padding:3px;filter:drop-shadow(0 3px 1px #243e3828)}
+.hud-photo strong{position:absolute;bottom:0;left:0;right:0;z-index:2;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;background:#fffdf4e8;padding:1px 4px;color:#263c42;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.hud-meta{display:flex;justify-content:space-between;gap:4px;margin:3px 0;color:#2e5053;font-size:9px;font-weight:700;white-space:nowrap}
+.hud-resources{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:2px;background:#f8f9e8;border:2px solid #486257;padding:2px 3px;color:#213c40;font-size:11px;font-weight:700;line-height:1.3;white-space:nowrap}
+.hud-coin{color:#a67d19}.hud-ball-basic{color:#d4505d}.hud-ball-great{color:#2c87bb}.hud-ball-ultra{color:#303a4b}
+.hud-team{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin-top:3px}.hud-mon{height:19px;display:grid;place-items:center;background:#4b63b5;border:1px solid #f2f0ce}.hud-mon .pokemon-portrait{width:17px;height:17px}.hud-mon.empty{background:#d6dcd1;color:#9ca9a0}
+.scene-message{top:15px;max-width:min(40vw,390px);font-size:13px}
+#actionDock:empty,#itemDock:empty,#detailsDock:empty{display:none}
+#actionDock{position:absolute;z-index:4;right:20px;top:50%;transform:translateY(-50%);width:min(315px,30vw);pointer-events:auto}
+#actionDock .action-panel{margin:0;max-height:min(64vh,580px);overflow:auto;box-shadow:6px 7px 0 #183e46c2}
+#actionDock .monster-grid{grid-template-columns:1fr 1fr}
+#actionDock .monster-card{min-width:0}
+#itemDock{position:absolute;z-index:4;bottom:14px;left:50%;transform:translateX(-50%);width:min(650px,calc(100vw - 390px));max-width:calc(100vw - 390px);min-height:88px;padding:8px 10px 10px;background:#fff9e9f5;border:3px solid #32575a;border-radius:9px;box-shadow:5px 5px 0 #173d41ac;pointer-events:auto}
+#itemDock.hand-size-1{width:185px}#itemDock.hand-size-2{width:345px}#itemDock.hand-size-3{width:500px}#itemDock.hand-size-4{width:650px}
+.hand-heading{display:flex;justify-content:space-between;align-items:center;padding:0 4px 5px;font:700 12px 'Chakra Petch',sans-serif;color:#2b4d50}.hand-heading span{color:#5f7777}
+.hand-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.hand-cards>.muted{grid-column:1/-1;text-align:center;margin:9px 0}
+#itemDock.hand-size-1 .hand-cards{grid-template-columns:1fr}#itemDock.hand-size-2 .hand-cards{grid-template-columns:repeat(2,minmax(0,1fr))}#itemDock.hand-size-3 .hand-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hand-cards .item-card{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:0;min-height:89px;margin:0;padding:6px;border:2px solid #8099a3;border-radius:5px;background:#f7f9fa;box-shadow:2px 3px 0 #506d7e}
+.hand-cards .item-icon{position:absolute;font-size:20px;width:20px}.hand-cards .item-copy{padding-left:23px;font-size:10px;line-height:1.23;overflow-wrap:anywhere}.hand-cards .item-copy strong{font-size:11px;line-height:1.15;margin-bottom:2px}.hand-cards .item-copy .muted{font-size:9px}.hand-cards .item-card .btn{align-self:flex-end;margin-top:auto;padding:1px 7px}.hand-cards .item-target{padding:2px;margin-top:3px;font-size:10px;border-width:1px}
+#detailsDock{position:absolute;z-index:4;left:15px;bottom:205px;pointer-events:auto}.detail-buttons{display:flex;gap:5px}.detail-buttons .btn{padding:4px 7px;background:#fff9e9e8}.detail-pop{position:absolute;left:0;bottom:36px;width:min(355px,calc(100vw - 30px));max-height:50vh;overflow:auto;background:#fff9e9;border:3px solid #355a5b;border-radius:8px;padding:10px;box-shadow:5px 5px 0 #173d41ac}.detail-pop h2{font:700 17px 'Chakra Petch';margin:0 0 8px}.detail-pop .log-list{max-height:none}
+@media(max-width:950px){.hud-player{width:126px;padding:3px}.hud-photo{height:68px}.hud-photo strong{font-size:9px}.hud-resources{font-size:9px}.hud-meta{font-size:8px}.hud-team .hud-mon{height:15px}.hud-team .pokemon-portrait{width:13px;height:13px}#itemDock{max-width:calc(100vw - 290px)}#actionDock{right:12px;width:min(285px,36vw)}#detailsDock{bottom:160px}.scene-message{font-size:11px}}
+@media(max-width:600px){.layout,.world-wrap{height:calc(100svh - 72px);min-height:610px}.player-hud{display:block}.hud-player{width:calc(25% - 5px);top:6px;bottom:auto;padding:2px;border-width:2px}.hud-0{left:4px}.hud-1{left:calc(25% + 1px);right:auto}.hud-2{left:calc(50% + 1px)}.hud-3{left:calc(75% + 1px);right:auto}.hud-photo{height:47px}.hud-photo strong{font-size:8px}.hud-meta{font-size:7px;margin:1px 0}.hud-resources{font-size:7px;border-width:1px;gap:0;padding:1px}.hud-team{display:none}.scene-message{top:92px;left:50%;transform:translateX(-50%);max-width:90%;font-size:10px}.scene-message.new-message{animation:none}#actionDock{top:43%;right:50%;transform:translate(50%,-50%);width:min(92vw,320px)}#actionDock .action-panel{max-height:38vh}#itemDock[class]{bottom:6px;width:calc(100vw - 12px);max-width:calc(100vw - 12px);padding:5px}.hand-cards{display:flex;overflow-x:auto;padding-bottom:3px}.hand-cards .item-card{min-width:135px;max-width:135px}#detailsDock{left:7px;bottom:134px}}

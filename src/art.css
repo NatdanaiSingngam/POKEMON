@@ -1,0 +1,7 @@
+.mon-icon { width: 46px; height: 46px; background: #eff6df; border: 2px solid #9bbb9d; border-radius: 7px; overflow: hidden; text-shadow: none; }
+.mon-icon svg { width: 100%; height: 100%; display: block; }
+.monster-card { min-height: 61px; }
+.monster-card .mon-icon { flex: none; }
+.battle-display .mon-icon { width: 76px; height: 76px; margin: 0 auto 6px; }
+.item-target { margin-top: 5px; padding: 3px 5px; font-size: 11px; }
+@media (max-width: 520px) { .monster-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mon-icon { width: 39px; height: 39px; } }

@@ -1,0 +1,31 @@
+@keyframes message-pop {
+  0% { transform: translateY(-8px) scale(.97); opacity: .6; }
+  65% { transform: translateY(2px) scale(1.01); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes action-rise {
+  from { transform: translateY(9px); opacity: .65; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.scene-message.new-message { animation: message-pop .38s ease-out; }
+.action-panel { animation: action-rise .3s ease-out; }
+.world-fx { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; z-index: 2; }
+.fx-card { min-width: 170px; max-width: min(75%, 430px); padding: 14px 24px; text-align: center; background: #fdf8dfef; color: #27444a; border: 4px solid #315955; border-radius: 14px; box-shadow: 7px 8px 0 #173f40aa; animation: fx-entrance 1.45s both; }
+.fx-card strong { display: block; font: 700 32px 'Chakra Petch', sans-serif; line-height: 1.15; }
+.fx-card span { display: block; margin-top: 3px; font-size: 13px; }
+.fx-dice { border-color: #428cbd; }
+.fx-catch { border-color: #3caa73; background: #e8ffdfef; }
+.fx-miss { border-color: #d45c61; }
+.fx-battle { border-color: #d45c61; background: #fff1d9ef; }
+.fx-sale { border-color: #d29d36; background: #fff4c6ef; }
+.fx-dice strong { animation: dice-tumble .55s ease-out; }
+.fx-catch::before, .fx-miss::before { content: '◉'; display: block; margin: -4px auto 3px; width: 30px; height: 30px; border: 3px solid #263f48; border-radius: 50%; color: #e45662; background: linear-gradient(#e45c63 0 45%,#263f48 45% 55%,#f9f6e8 55%); font-size: 14px; line-height: 25px; animation: ball-hop .8s ease-out; }
+.fx-sale::before { content: '✦ ✦ ✦'; display: block; color: #dc9d36; font-size: 18px; letter-spacing: 8px; animation: coin-rise .8s ease-out; }
+@keyframes dice-tumble { from { transform: rotate(-30deg) scale(.3); } 55% { transform: rotate(12deg) scale(1.2); } to { transform: rotate(0) scale(1); } }
+@keyframes ball-hop { from { transform: translate(-80px,50px) rotate(-100deg) scale(.4); } 65% { transform: translate(10px,-15px) rotate(20deg) scale(1.15); } to { transform: none; } }
+@keyframes coin-rise { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fx-entrance { 0% { opacity: 0; transform: translateY(24px) scale(.6) rotate(-8deg); } 20% { opacity: 1; transform: translateY(-10px) scale(1.08) rotate(2deg); } 32% { transform: translateY(0) scale(1) rotate(0); } 82% { opacity: 1; } 100% { opacity: 0; transform: translateY(-17px) scale(.95); } }
+@media (prefers-reduced-motion: reduce) {
+  .scene-message.new-message, .action-panel, .fx-card, .fx-dice strong, .fx-catch::before, .fx-miss::before, .fx-sale::before { animation: none; }
+  .btn { transition: none; }
+}

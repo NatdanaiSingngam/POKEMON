@@ -1,0 +1,24 @@
+#rollOverlay:empty{display:none}
+#rollOverlay{position:fixed;inset:0;z-index:7;display:grid;place-items:center;pointer-events:none}
+.roll-shade{position:absolute;inset:0;display:grid;place-items:center;padding:18px;background:rgba(9,28,39,.68);backdrop-filter:blur(4px);pointer-events:auto}
+.roll-card{width:min(90vw,310px);min-height:304px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#fff9e9;border:4px solid #244950;border-radius:18px;box-shadow:9px 10px 0 #102e38,0 22px 65px #071723a8;text-align:center;padding:22px;color:#284347}
+.roll-label{font:700 19px 'Chakra Petch',sans-serif;letter-spacing:1px}
+.roll-die{width:130px;height:130px;display:grid;place-items:center;background:#fff;border:7px solid #367596;border-radius:22px;box-shadow:inset -9px -10px 0 #d5ebee,8px 9px 0 #153f50;transform-origin:center}
+.roll-die span{font:700 83px 'Chakra Petch',sans-serif;color:#e25c61;line-height:1}
+.roll-detail{font-size:16px;font-weight:600;min-height:25px}
+.roll-card.is-rolling .roll-die{animation:die-shuffle .28s ease-in-out infinite alternate}
+.roll-card.is-rolling .roll-die span{animation:number-flicker .12s ease-in-out infinite alternate}
+.roll-card.is-result .roll-die{animation:die-land .42s cubic-bezier(.2,1.7,.3,1) both}
+.roll-card.is-result{animation:result-pop .35s ease-out both}
+.roll-card.roll-catch .roll-die{border-color:#d35f68;box-shadow:inset -9px -10px 0 #ffe8e1,8px 9px 0 #743c49}
+.roll-card.roll-catch.is-result .roll-label{color:#24765d}
+.battle-roll-shade{background:#090b0c7d;backdrop-filter:none}
+.roll-card.roll-battle{min-height:270px;background:#1d2528;border-color:#f5eee2;border-radius:3px;color:#f8f6eb;box-shadow:8px 9px 0 #0a0c0d,0 20px 70px #0009}
+.roll-card.roll-battle .roll-label{color:#ffd579}
+.roll-card.roll-battle .roll-die{background:#f7f5e9;border-color:#de5e66;border-radius:8px;box-shadow:inset -9px -10px 0 #ded9c8,8px 9px 0 #13191a}
+.roll-card.roll-battle .roll-die span{color:#25323b}
+@keyframes die-shuffle{from{transform:translate(-5px,-11px) rotate(-15deg) scale(.94)}to{transform:translate(6px,3px) rotate(14deg) scale(1.05)}}
+@keyframes number-flicker{to{opacity:.65;transform:scale(.91)}}
+@keyframes die-land{from{transform:translateY(-36px) rotate(-28deg) scale(.78)}to{transform:translateY(0) rotate(0) scale(1)}}
+@keyframes result-pop{from{filter:brightness(1.5)}to{filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.roll-card.is-rolling .roll-die,.roll-card.is-rolling .roll-die span,.roll-card.is-result .roll-die,.roll-card.is-result{animation:none}}
