@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, applyAction, actionsForBot } from '../src/game/engine.js';
-import { ITEMS, POKEMON, POOLS, ROLES, TILES } from '../src/game/data.js';
+import { DRAW_ITEMS, ITEMS, POKEMON, POOLS, ROLES, SHOP_ITEMS, TILES } from '../src/game/data.js';
 
 const people = [0,1,2,3].map(i => ({ id: `p${i}`, name: `Player ${i}`, role: ['trainer','fisher','scientist','rocket'][i] }));
 const fixed = value => () => (value - 1) / 6 + 0.001;
@@ -9,6 +9,15 @@ const run = (game, id, action, die = 1) => {
   const result = applyAction(game, id, action, fixed(die));
   assert.equal(result.ok, true, result.error);
 };
+
+test('shop items are excluded from every possible turn draw', () => {
+  assert.equal(DRAW_ITEMS.length, Object.keys(ITEMS).length - SHOP_ITEMS.length);
+  assert.ok(DRAW_ITEMS.every(itemId => !SHOP_ITEMS.includes(itemId)));
+  for (let index = 0; index < DRAW_ITEMS.length; index++) {
+    const game = createGame(people, () => (index + 0.5) / DRAW_ITEMS.length);
+    assert.equal(game.players[0].items[0], DRAW_ITEMS[index]);
+  }
+});
 
 test('crossing Start stops movement, sells with one left, completes after third lap', () => {
   const game = createGame(people);

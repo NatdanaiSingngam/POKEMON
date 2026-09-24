@@ -1,4 +1,4 @@
-import { BALLS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, TILES, ZONES } from './data.js';
+import { BALLS, DRAW_ITEMS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, TILES, ZONES } from './data.js';
 
 const die = rng => Math.floor(rng() * 6) + 1;
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
@@ -37,7 +37,7 @@ function activePokemon(p) { return p.pokemon.filter(mon => mon.hp > 0 && (p.badg
 function healTeam(p) { p.pokemon.forEach(mon => { mon.hp = POKEMON[mon.species].hp; }); }
 function drawTurnItem(game, rng) {
   const p = current(game);
-  const itemId = pick(Object.keys(ITEMS), rng);
+  const itemId = pick(DRAW_ITEMS, rng);
   if (p.items.length < MAX_ITEMS) {
     p.items.push(itemId);
     log(game, `${p.name} เริ่มตาและจั่วการ์ดไอเทม 1 ใบ`);
@@ -79,7 +79,7 @@ function advanceQuest(game, p, event, rng) {
   p.quest = null;
   p.coins += quest.coins;
   if (quest.reward === 'item') {
-    const itemId = pick(Object.keys(ITEMS), rng);
+    const itemId = pick(DRAW_ITEMS, rng);
     if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
     else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
   } else {
@@ -144,7 +144,7 @@ function resolveTile(game, rng) {
   } else if (tile.type === 'gym' || tile.type === 'villain') {
     offerNpcBattle(game, rng, tile.type);
   } else if (tile.type === 'item') {
-    const itemId = pick(Object.keys(ITEMS), rng);
+    const itemId = pick(DRAW_ITEMS, rng);
     if (p.items.length < MAX_ITEMS) {
       p.items.push(itemId);
       log(game, `${p.name} ได้การ์ดไอเทม 1 ใบ`);
@@ -162,7 +162,7 @@ function resolveTile(game, rng) {
     if (event.kind === 'balls') p.balls.basic += event.amount;
     if (event.kind === 'heal') healTeam(p);
     if (event.kind === 'item') {
-      const itemId = pick(Object.keys(ITEMS), rng);
+      const itemId = pick(DRAW_ITEMS, rng);
       if (p.items.length < MAX_ITEMS) p.items.push(itemId);
       else { game.step = 'item_overflow'; game.pending = { kind: 'item', itemId }; return; }
     }

@@ -105,6 +105,7 @@ export const ITEMS = {
   shield: { name: 'โล่ฉุกเฉิน', icon: '⬡', timing: 'battle', target: 'self', price: 3, text: 'ลดความเสียหายครั้งถัดไป 2' },
 };
 export const SHOP_ITEMS = ['potion', 'super_potion', 'repel', 'super_repel', 'full_heal', 'rare_candy', 'bicycle'];
+export const DRAW_ITEMS = Object.keys(ITEMS).filter(itemId => !SHOP_ITEMS.includes(itemId));
 
 const tile = (type, zone, label) => ({ type, zone, label });
 export const TILES = Array.from({ length: 40 }, (_, i) => {
