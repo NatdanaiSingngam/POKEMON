@@ -20,7 +20,7 @@ export function createGame(participants, rng = Math.random) {
   const game = {
     phase: 'playing', players, turn: 0, step: 'roll', pending: null, battle: null,
     serial: 1, lastRoll: null, lastCatch: null, lastBattle: null, notice: null, result: null,
-    encounterHistory: [],
+    encounterHistory: [], announcements: [],
     log: ['เริ่มเกมแล้ว — วนกระดานคนละ 3 รอบ แล้วนับเงิน'],
     rngSeed: Math.floor(rng() * 1000000),
   };
@@ -31,6 +31,10 @@ export function createGame(participants, rng = Math.random) {
 function log(game, message) {
   game.log.unshift(message);
   game.log.length = Math.min(game.log.length, 14);
+}
+function announce(game, kind, title, text, extra = {}) {
+  game.announcements.push({ id: game.serial++, kind, title, text, ...extra });
+  game.announcements = game.announcements.slice(-24);
 }
 function current(game) { return game.players[game.turn]; }
 function player(game, id) { return game.players.find(p => p.id === id); }
@@ -103,12 +107,12 @@ function advanceQuest(game, p, event, rng) {
   p.coins += quest.coins;
   if (quest.reward === 'item') {
     const itemId = pick(DRAW_ITEMS, rng);
-    if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
-    else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
+    if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
+    else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
   } else {
     const species = pickPokemonForPlayer(game, p, [...POOLS.green, ...POOLS.blue], rng);
-    if (p.pokemon.length < MAX_POKEMON) { p.pokemon.push(makePokemon(game, species, POKEMON[species].zone)); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`); }
-    else { p.coins += 5; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); }
+    if (p.pokemon.length < MAX_POKEMON) { p.pokemon.push(makePokemon(game, species, POKEMON[species].zone)); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`, { species }); }
+    else { p.coins += 5; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); }
   }
 }
 function offerNpcBattle(game, rng, kind) {
@@ -160,6 +164,7 @@ function resolveTile(game, rng) {
     const questId = pick(Object.keys(QUESTS), rng);
     game.pending = { kind: 'quest', questId }; game.step = 'quest_choice';
     log(game, `${p.name} พบเควส ${QUESTS[questId].name}`);
+    announce(game, 'quest', `${p.name} พบเควส`, `${QUESTS[questId].name} · ${QUESTS[questId].text}`);
   } else if (tile.type === 'cave') {
     p.caveTurns = 3;
     game.notice = { id: game.serial++, kind: 'cave', title: 'ติดอยู่ในถ้ำ!', text: `${p.name} ต้องข้าม 3 ตา` };
@@ -180,6 +185,7 @@ function resolveTile(game, rng) {
     const event = pick(EVENTS, rng);
     game.pending = { kind: 'event', eventId: event.id };
     game.notice = { id: game.serial++, kind: 'event', title: event.name, text: event.text, playerId: p.id };
+    announce(game, 'event', `${p.name}: ${event.name}`, event.text, { noticeId: game.notice.id });
     log(game, `${p.name}: ${event.name} — ${event.text}`);
     if (event.kind === 'coins') p.coins = Math.max(0, p.coins + event.amount);
     if (event.kind === 'balls') p.balls.basic += event.amount;
@@ -209,6 +215,7 @@ function battlePower(mon, other, firstAttack) {
 function finishBattle(game, winnerSide, loserSide, rng) {
   const b = game.battle;
   game.lastBattle = { id: game.serial++, kind: b.kind, winnerSide, loserSide, winnerName: winnerSide === 'wild' ? 'โปเกมอนป่า' : player(game, winnerSide)?.name, loserName: loserSide === 'wild' ? 'โปเกมอนป่า' : player(game, loserSide)?.name };
+  announce(game, 'battle', `${game.lastBattle.winnerName} ชนะการต่อสู้!`, `${game.lastBattle.winnerName} ชนะ ${game.lastBattle.loserName}`, { winnerSide, loserSide, battleKind: b.kind });
   const winningMon = getBattleMon(game, winnerSide);
   if (winnerSide !== 'wild' && winningMon && POKEMON[winningMon.species].ability === 'heal') {
     winningMon.hp = Math.min(POKEMON[winningMon.species].hp, winningMon.hp + 1);
@@ -252,6 +259,9 @@ function resolveBattleRolls(game, rng) {
   const b = game.battle, [first, second] = b.sides;
   if (b.rolls[first] === undefined || b.rolls[second] === undefined) return;
   const a = b.rolls[first], d = b.rolls[second];
+  const firstName = first === 'wild' ? 'โปเกมอนป่า' : player(game, first)?.name;
+  const secondName = second === 'wild' ? 'โปเกมอนป่า' : player(game, second)?.name;
+  announce(game, 'battleRoll', 'ผลทอยต่อสู้', `${firstName} ทอยได้ ${a} · ${secondName} ทอยได้ ${d}${a === d ? ' · เสมอ ทอยใหม่' : ` · ${a > d ? firstName : secondName} ได้โจมตี`}`, { rolls: [a, d] });
   b.rolls = {};
   if (a === d) {
     b.message = `เต๋าเสมอ ${a}–${d} ทอยใหม่`;
@@ -324,6 +334,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     if (action.choice === 'accept') {
       p.quest = { id: game.pending.questId, progress: 0 };
       log(game, `${p.name} รับเควส ${QUESTS[p.quest.id].name}`);
+      announce(game, 'quest', `${p.name} รับเควส`, `${QUESTS[p.quest.id].name} · ${QUESTS[p.quest.id].text}`);
     }
     endTurn(game, rng);
   } else if (action.type === 'abandonQuest') {
@@ -384,6 +395,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     const success = legendary ? value === 6 : total >= threshold;
     if (success) { p.pokemon.push(makePokemon(game, species, zone)); advanceQuest(game, p, 'catch', rng); }
     game.lastCatch = { playerId: p.id, species, value, total, threshold, success, ball: action.ball };
+    announce(game, 'catch', success ? `${p.name} จับสำเร็จ!` : `${p.name} จับไม่สำเร็จ`, `${POKEMON[species].name} · ทอยได้ ${value}${legendary ? '' : ` รวมโบนัส ${total}`} · ต้องได้ ${threshold}${success ? ' · เข้าทีมแล้ว' : ' · ลองใหม่ได้'}`, { species, success, playerId: p.id });
     log(game, `${p.name} ทอยจับ ${value}${legendary ? '' : ` (+${total - value})`} — ${success ? `จับ ${POKEMON[species].name} สำเร็จ!` : `จับ ${POKEMON[species].name} ไม่สำเร็จ ยังลองใหม่ได้`}`);
     if (success) endTurn(game, rng);
   } else if (action.type === 'skipCapture') {
@@ -475,6 +487,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     }
     p.items.splice(idx, 1);
     log(game, `${p.name} ใช้ ${item.name}`);
+    announce(game, 'item', `${p.name} ใช้ ${item.name}`, item.text, { itemId, playerId: p.id, targetName: item.target === 'other' ? player(game, action.targetId)?.name : null });
   } else return fail('ไม่รู้จักคำสั่งนี้');
   return { ok: true };
 }

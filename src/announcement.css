@@ -3,6 +3,16 @@
 .announcement-shade{position:absolute;inset:0;display:grid;place-items:center;background:#09212bba;backdrop-filter:blur(4px);pointer-events:auto}
 .announcement-card{width:min(92vw,440px);padding:25px 28px 27px;text-align:center;color:#24414a;background:#fff9e9;border:4px solid #274e55;border-top:10px solid #e6a63e;border-radius:15px;box-shadow:10px 10px 0 #0d2931,0 20px 60px #07161b88;animation:announcement-enter .3s both}
 .announcement-win{border-top-color:#55be73}.announcement-lose{border-top-color:#e57074}.announcement-cave{border-top-color:#758ba6}
+.announcement-catch{border-top-color:#5baad5}.announcement-catch .announcement-pokemon{width:100px;height:100px;margin:0 auto 8px;animation:catch-pop .6s cubic-bezier(.2,1.5,.4,1) both}.announcement-pokemon .pokemon-portrait{width:100%;height:100%}
+.announcement-quest{border-top-color:#b47ad5}.announcement-battleRoll{border-top-color:#e6a63e}.announcement-battleRoll .announcement-icon{animation:dice-bounce .55s ease-in-out 2}
+.announcement-item{width:76px;height:100px;margin:0 auto 12px;display:grid;place-items:center;background:#fff;border:4px solid #274e55;box-shadow:5px 6px 0 #12323a;color:#8e54b7;font-size:38px;animation:item-play 1.05s cubic-bezier(.2,.7,.2,1) both}
+.announcement-item::after{content:'✦';position:absolute;color:#efc65d;font-size:20px;transform:translate(44px,-42px);animation:item-spark .8s ease-out both}
+.announcement-item .pokemon-portrait{width:100%}
 .announcement-icon{font-size:58px;line-height:1.2;margin:8px 0}.announcement-card h2{font:700 29px 'Chakra Petch',sans-serif;margin:4px 0 9px}.announcement-card p{font-size:17px;line-height:1.5;margin:0 0 21px}.announcement-card .btn{font-size:16px}
 @keyframes announcement-enter{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes item-play{0%{opacity:0;transform:translateY(90px) rotate(-18deg) scale(.5)}55%{opacity:1;transform:translateY(-18px) rotate(8deg) scale(1.13)}100%{transform:translateY(0) rotate(0) scale(1)}}
+@keyframes item-spark{from{opacity:0;scale:.3}50%{opacity:1;scale:1.3}to{opacity:0;scale:1.8}}
+@keyframes catch-pop{from{opacity:0;transform:scale(.2) rotate(-12deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+@keyframes dice-bounce{0%,100%{transform:translateY(0) rotate(0)}35%{transform:translateY(-12px) rotate(-12deg)}70%{transform:translateY(3px) rotate(9deg)}}
+@media(prefers-reduced-motion:reduce){.announcement-card,.announcement-item,.announcement-item::after,.announcement-catch .announcement-pokemon,.announcement-battleRoll .announcement-icon{animation:none}}
 @media(max-height:560px){.announcement-card{padding:14px 20px}.announcement-icon{font-size:35px;margin:2px 0}.announcement-card h2{font-size:22px}.announcement-card p{font-size:14px;margin-bottom:10px}}
