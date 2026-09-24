@@ -12,9 +12,9 @@ export const ZONES = {
 };
 
 export const BALLS = {
-  basic: { name: 'บอลแดง', color: '#f26970', bonus: 0, price: 1 },
-  great: { name: 'บอลน้ำเงิน', color: '#4598e6', bonus: 1, price: 2 },
-  ultra: { name: 'บอลดำ', color: '#303c4b', bonus: 2, price: 3 },
+  basic: { name: 'บอลแดง', color: '#f26970', bonus: 0, price: 2 },
+  great: { name: 'บอลน้ำเงิน', color: '#4598e6', bonus: 1, price: 3 },
+  ultra: { name: 'บอลดำ', color: '#303c4b', bonus: 2, price: 5 },
 };
 
 export const ROLES = {
@@ -93,19 +93,19 @@ export const EVOLUTIONS = {
 };
 
 export const QUESTS = {
-  catch_two: { name: 'นักจับมือฉมัง', text: 'จับโปเกมอนให้สำเร็จ 2 ตัว', event: 'catch', target: 2, coins: 6, reward: 'item' },
-  visit_city: { name: 'ท่องเมือง', text: 'แวะเมือง 2 ครั้ง', event: 'city', target: 2, coins: 5, reward: 'item' },
-  win_battle: { name: 'ยอดนักสู้', text: 'ชนะการต่อสู้ 1 ครั้ง', event: 'battle', target: 1, coins: 6, reward: 'pokemon' },
-  catch_three: { name: 'ถุงบอลรั่ว', text: 'จับโปเกมอนให้สำเร็จ 3 ตัว', event: 'catch', target: 3, coins: 9, reward: 'item' },
-  city_regular: { name: 'ลูกค้าขาประจำ', text: 'แวะเมือง 3 ครั้ง', event: 'city', target: 3, coins: 8, reward: 'pokemon' },
-  battle_two: { name: 'สายบวกประจำซอย', text: 'ชนะการต่อสู้ 2 ครั้ง', event: 'battle', target: 2, coins: 10, reward: 'item' },
-  first_catch: { name: 'มือใหม่ใจกล้า', text: 'จับโปเกมอนให้สำเร็จ 1 ตัว', event: 'catch', target: 1, coins: 3, reward: 'item' },
-  city_hopper: { name: 'เที่ยวทุกป้าย', text: 'แวะเมือง 4 ครั้ง', event: 'city', target: 4, coins: 12, reward: 'item' },
-  battle_three: { name: 'ราชาเต๋าเดือด', text: 'ชนะการต่อสู้ 3 ครั้ง', event: 'battle', target: 3, coins: 15, reward: 'pokemon' },
+  catch_two: { name: 'นักจับมือฉมัง', text: 'จับโปเกมอนให้สำเร็จ 2 ตัว', event: 'catch', target: 2, coins: 3, reward: 'item' },
+  visit_city: { name: 'ท่องเมือง', text: 'แวะเมือง 2 ครั้ง', event: 'city', target: 2, coins: 3, reward: 'item' },
+  win_battle: { name: 'ยอดนักสู้', text: 'ชนะการต่อสู้ 1 ครั้ง', event: 'battle', target: 1, coins: 3, reward: 'pokemon' },
+  catch_three: { name: 'ถุงบอลรั่ว', text: 'จับโปเกมอนให้สำเร็จ 3 ตัว', event: 'catch', target: 3, coins: 5, reward: 'item' },
+  city_regular: { name: 'ลูกค้าขาประจำ', text: 'แวะเมือง 3 ครั้ง', event: 'city', target: 3, coins: 5, reward: 'pokemon' },
+  battle_two: { name: 'สายบวกประจำซอย', text: 'ชนะการต่อสู้ 2 ครั้ง', event: 'battle', target: 2, coins: 6, reward: 'item' },
+  first_catch: { name: 'มือใหม่ใจกล้า', text: 'จับโปเกมอนให้สำเร็จ 1 ตัว', event: 'catch', target: 1, coins: 2, reward: 'item' },
+  city_hopper: { name: 'เที่ยวทุกป้าย', text: 'แวะเมือง 4 ครั้ง', event: 'city', target: 4, coins: 7, reward: 'item' },
+  battle_three: { name: 'ราชาเต๋าเดือด', text: 'ชนะการต่อสู้ 3 ครั้ง', event: 'battle', target: 3, coins: 8, reward: 'pokemon' },
 };
 
 export const ITEMS = {
-  lucky_coin: { name: 'เหรียญนำโชค', icon: '✦', timing: 'outside', target: 'self', price: 4, text: 'รับเงิน 3 เหรียญ' },
+  lucky_coin: { name: 'เหรียญนำโชค', icon: '✦', timing: 'outside', target: 'self', price: 4, text: 'รับเงิน 2 เหรียญ' },
   pickpocket: { name: 'มือไว', icon: '✋', timing: 'outside', target: 'other', price: 4, effect: 'steal', amount: 5, text: 'รับเงินจากคู่แข่งสูงสุด 5 เหรียญ' },
   full_heal: { name: 'ยาฟื้นทีม', icon: '✚', timing: 'outside', target: 'self', price: 2, text: 'ฟื้น HP โปเกมอนทั้งทีมจนเต็ม' },
   ball_box: { name: 'กล่องโปเกบอล', icon: '◉', timing: 'outside', target: 'self', price: 3, text: 'รับบอลแดง 3 ลูก' },
@@ -119,10 +119,10 @@ export const ITEMS = {
   power_up: { name: 'พลังเร่ง', icon: '⚡', timing: 'battle', target: 'self', price: 4, text: 'การโจมตีครั้งถัดไปแรงขึ้น 2' },
   smoke: { name: 'ควันแกล้ง', icon: '☁', timing: 'battle', target: 'other', price: 3, text: 'แต้มเต๋าคู่แข่งครั้งถัดไป -2' },
   shield: { name: 'โล่ฉุกเฉิน', icon: '⬡', timing: 'battle', target: 'self', price: 3, text: 'ลดความเสียหายครั้งถัดไป 2' },
-  tip_jar: { name: 'กระปุกทิป', icon: '◈', timing: 'outside', target: 'self', effect: 'coins', amount: 2, text: 'รับ 2 เหรียญ' },
-  found_wallet: { name: 'กระเป๋าตก', icon: '▣', timing: 'outside', target: 'self', effect: 'coins', amount: 4, text: 'รับ 4 เหรียญ' },
-  coupon: { name: 'คูปองลดราคา', icon: '✧', timing: 'outside', target: 'self', effect: 'coins', amount: 3, text: 'แลกคูปองรับ 3 เหรียญ' },
-  street_show: { name: 'เปิดหมวก', icon: '♫', timing: 'outside', target: 'self', effect: 'coins', amount: 5, text: 'แสดงเปิดหมวกรับ 5 เหรียญ' },
+  tip_jar: { name: 'กระปุกทิป', icon: '◈', timing: 'outside', target: 'self', effect: 'coins', amount: 1, text: 'รับ 1 เหรียญ' },
+  found_wallet: { name: 'กระเป๋าตก', icon: '▣', timing: 'outside', target: 'self', effect: 'coins', amount: 2, text: 'รับ 2 เหรียญ' },
+  coupon: { name: 'คูปองลดราคา', icon: '✧', timing: 'outside', target: 'self', effect: 'coins', amount: 2, text: 'แลกคูปองรับ 2 เหรียญ' },
+  street_show: { name: 'เปิดหมวก', icon: '♫', timing: 'outside', target: 'self', effect: 'coins', amount: 3, text: 'แสดงเปิดหมวกรับ 3 เหรียญ' },
   red_ball_pair: { name: 'บอลคู่จิ้น', icon: '◉', timing: 'outside', target: 'self', effect: 'balls', amount: 2, text: 'รับบอลแดง 2 ลูก' },
   red_ball_bundle: { name: 'บอลลดแลกแจกแถม', icon: '◉', timing: 'outside', target: 'self', effect: 'balls', amount: 4, text: 'รับบอลแดง 4 ลูก' },
   blue_ball_gift: { name: 'ของฝากชาวฟ้า', icon: '◉', timing: 'outside', target: 'self', effect: 'greatBall', amount: 1, text: 'รับบอลน้ำเงิน 1 ลูก' },
@@ -130,7 +130,7 @@ export const ITEMS = {
   team_snack: { name: 'ข้าวกล่องทีม', icon: '✚', timing: 'outside', target: 'self', effect: 'heal', amount: 2, text: 'ฟื้น HP ทุกตัว 2 หน่วย' },
   energy_drink: { name: 'น้ำชูกำลัง', icon: '✚', timing: 'outside', target: 'self', effect: 'heal', amount: 4, text: 'ฟื้น HP ทุกตัว 4 หน่วย' },
   bandage: { name: 'พลาสเตอร์ลายดาว', icon: '✚', timing: 'outside', target: 'self', effect: 'heal', amount: 1, text: 'ฟื้น HP ทุกตัว 1 หน่วย' },
-  piggy_bank: { name: 'เขย่ากระปุก', icon: '◈', timing: 'outside', target: 'self', effect: 'coins', amount: 6, text: 'ทุบกระปุกรับ 6 เหรียญ' },
+  piggy_bank: { name: 'เขย่ากระปุก', icon: '◈', timing: 'outside', target: 'self', effect: 'coins', amount: 3, text: 'ทุบกระปุกรับ 3 เหรียญ' },
   loose_change: { name: 'เหรียญใต้โซฟา', icon: '◈', timing: 'outside', target: 'self', effect: 'coins', amount: 1, text: 'รับ 1 เหรียญ' },
   bus_ticket: { name: 'ตั๋วรถเมล์', icon: '↗', timing: 'outside', target: 'self', move: 1, text: 'ทอยเต๋าแล้วเดินเพิ่ม 1 ช่อง' },
   running_shoes: { name: 'รองเท้าวิ่ง', icon: '↗', timing: 'outside', target: 'self', move: 2, text: 'ทอยเต๋าแล้วเดินเพิ่ม 2 ช่อง' },
@@ -167,13 +167,13 @@ export const EVENTS = [
   { id: 'heal', name: 'พักแรม', text: 'ฟื้น HP ทั้งทีม', kind: 'heal' },
   { id: 'item', name: 'กล่องลึกลับ', text: 'จั่วไอเทม 1 ใบ', kind: 'item' },
   { id: 'legendary', name: 'LEGENDARY IN AREA', text: 'พบโปเกมอนตำนาน', kind: 'legendary' },
-  { id: 'meme_coin', name: 'มีมขายดี', text: 'โพสต์มีมแล้วรับ 5 เหรียญ', kind: 'coins', amount: 5 },
+  { id: 'meme_coin', name: 'มีมขายดี', text: 'โพสต์มีมแล้วรับ 3 เหรียญ', kind: 'coins', amount: 3 },
   { id: 'lost_sock', name: 'ถุงเท้าหาย', text: 'ซื้อถุงเท้าใหม่ เสีย 1 เหรียญ', kind: 'coins', amount: -1 },
   { id: 'street_food', name: 'ร้านข้าวใจดี', text: 'กินอิ่ม ฟื้น HP ทั้งทีม', kind: 'heal' },
   { id: 'ball_rain', name: 'ฝนตกเป็นบอล', text: 'รับบอลแดง 4 ลูก', kind: 'balls', amount: 4 },
   { id: 'mystery_box', name: 'พัสดุไม่ระบุผู้ส่ง', text: 'จั่วไอเทม 1 ใบ', kind: 'item' },
   { id: 'bus_fare', name: 'ค่ารถแพงขึ้น', text: 'เสีย 3 เหรียญ', kind: 'coins', amount: -3 },
-  { id: 'sponsor', name: 'สปอนเซอร์เข้าด่วน', text: 'รับ 6 เหรียญ', kind: 'coins', amount: 6 },
+  { id: 'sponsor', name: 'สปอนเซอร์เข้าด่วน', text: 'รับ 3 เหรียญ', kind: 'coins', amount: 3 },
   { id: 'forgotten_ball', name: 'บอลในกระเป๋าเก่า', text: 'รับบอลแดง 1 ลูก', kind: 'balls', amount: 1 },
   { id: 'nap_time', name: 'งีบในโปเกมอนเซ็นเตอร์', text: 'ฟื้น HP ทั้งทีม', kind: 'heal' },
   { id: 'lucky_draw', name: 'วงล้อโชคดี', text: 'จั่วไอเทม 1 ใบ', kind: 'item' },

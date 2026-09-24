@@ -38,6 +38,11 @@ function announce(game, kind, title, text, extra = {}) {
 }
 function current(game) { return game.players[game.turn]; }
 function player(game, id) { return game.players.find(p => p.id === id); }
+export function saleValue(mon, role) {
+  const species = POKEMON[mon.species];
+  if (!species) return 0;
+  return Math.max(2, Math.ceil(species.price * 0.65)) + (species.ability === 'sale' ? 1 : 0) + (role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0) + (role === 'merchant' ? 1 : 0);
+}
 export function badgeRequirement(species) { const zone = POKEMON[species]?.zone; return zone === 'purple' ? 1 : ['red', 'legendary'].includes(zone) ? 2 : 0; }
 function activePokemon(p) { return p.pokemon.filter(mon => mon.hp > 0 && (p.badges?.length || 0) >= badgeRequirement(mon.species)); }
 function healTeam(p) { p.pokemon.forEach(mon => { mon.hp = POKEMON[mon.species].hp; }); }
@@ -108,11 +113,11 @@ function advanceQuest(game, p, event, rng) {
   if (quest.reward === 'item') {
     const itemId = pick(DRAW_ITEMS, rng);
     if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
-    else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
+    else { p.coins += 1; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 1} เหรียญ (การ์ดเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 1} เหรียญ (การ์ดเต็ม)`); }
   } else {
     const species = pickPokemonForPlayer(game, p, [...POOLS.green, ...POOLS.blue], rng);
     if (p.pokemon.length < MAX_POKEMON) { p.pokemon.push(makePokemon(game, species, POKEMON[species].zone)); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`, { species }); }
-    else { p.coins += 5; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); }
+    else { p.coins += 2; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 2} เหรียญ (ทีมเต็ม)`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins + 2} เหรียญ (ทีมเต็ม)`); }
   }
 }
 function offerNpcBattle(game, rng, kind) {
@@ -240,10 +245,10 @@ function finishBattle(game, winnerSide, loserSide, rng) {
       advanceQuest(game, winner, 'battle', rng); endTurn(game, rng); return;
     }
     if (b.kind === 'villain') {
-      winner.coins += 5;
+      winner.coins += 3;
       advanceQuest(game, winner, 'battle', rng);
       const eligible = winner.pokemon.filter(mon => EVOLUTIONS[mon.species]);
-      log(game, `${winner.name} ชนะวายร้าย! ได้ 5 เหรียญ และสิทธิ์พัฒนาร่าง`);
+      log(game, `${winner.name} ชนะวายร้าย! ได้ 3 เหรียญ และสิทธิ์พัฒนาร่าง`);
       game.battle = null;
       if (eligible.length) { game.step = 'evolve_choice'; game.pending = { kind: 'evolve' }; }
       else endTurn(game, rng);
@@ -359,8 +364,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     let gained = 0;
     for (const uid of ids) {
       const mon = p.pokemon.find(item => item.uid === uid);
-      const species = POKEMON[mon.species];
-      gained += species.price + (species.ability === 'sale' ? 1 : 0) + (p.role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0) + (p.role === 'merchant' ? 1 : 0);
+      gained += saleValue(mon, p.role);
     }
     p.pokemon = p.pokemon.filter(mon => !ids.includes(mon.uid));
     p.coins += gained;
@@ -473,7 +477,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       if (!target || (item.target === 'other' && (target.id === p.id || target.done))) return fail('เป้าหมายไม่ถูกต้อง');
       const candyTarget = itemId === 'rare_candy' ? p.pokemon.find(mon => mon.uid === action.targetId && EVOLUTIONS[mon.species]) : null;
       if (itemId === 'rare_candy' && !candyTarget) return fail('เลือกโปเกมอนที่พัฒนาร่างได้');
-      if (itemId === 'lucky_coin') p.coins += 3;
+      if (itemId === 'lucky_coin') p.coins += 2;
       if (itemId === 'full_heal') healTeam(p);
       if (candyTarget) { candyTarget.species = EVOLUTIONS[candyTarget.species]; candyTarget.hp = POKEMON[candyTarget.species].hp; }
       if (itemId === 'ball_box') p.balls.basic += 3;
