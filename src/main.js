@@ -105,7 +105,7 @@ function applyState(next, roomCode) {
 }
 function suspenseValue(next, kind) {
   if (kind === 'catch') return next.lastCatch?.playerId === playerId ? next.lastCatch.value : null;
-  if (kind === 'move') return next.lastRoll?.playerId === playerId ? next.lastRoll.value : null;
+  if (kind === 'move') return next.lastRoll?.playerId === playerId ? next.lastRoll.rolled : null;
   const battleRoll = next.battle?.rolls?.[playerId];
   if (battleRoll !== undefined) return battleRoll;
   const ownName = next.players.find(p => p.id === playerId)?.name;
@@ -115,6 +115,11 @@ function suspenseValue(next, kind) {
 function drawSuspense(stage, value) {
   if (!suspense) return;
   const { kind, result } = suspense;
+  if (kind === 'move') {
+    const bonus = suspense.latest?.state.lastRoll?.bonus || 0;
+    $('rollOverlay').innerHTML = `<div class="roll-world-label ${stage === 'rolling' ? 'is-rolling' : 'is-result'}" role="status"><span>${stage === 'rolling' ? '🎲 เต๋ากำลังกลิ้ง…' : '🎲 ผลเต๋าเดิน'}</span>${stage === 'result' ? `<strong>${value ?? '—'}</strong>${bonus ? `<small>โบนัสเดิน +${bonus} · รวม ${Number(value) + bonus} ช่อง</small>` : '<small>หมากกำลังเดิน</small>'}` : ''}</div>`;
+    return;
+  }
   const caption = kind === 'catch' ? 'ทอยจับโปเกมอน' : kind === 'battle' ? 'ทอยเต๋าต่อสู้' : 'ทอยเต๋าเดิน';
   const outcome = kind === 'catch' && result ? (result.success ? 'จับสำเร็จ!' : result.escaped ? 'โปเกมอนหนีไปแล้ว!' : 'จับไม่สำเร็จ') : kind === 'battle' ? 'แต้มต่อสู้' : 'เดินบนกระดาน';
   $('rollOverlay').innerHTML = `<div class="roll-shade ${kind === 'battle' ? 'battle-roll-shade' : ''}"><div class="roll-card ${stage === 'rolling' ? 'is-rolling' : 'is-result'} ${kind === 'catch' ? 'roll-catch' : kind === 'battle' ? 'roll-battle' : ''}" role="status"><div class="roll-label">${stage === 'rolling' ? caption : outcome}</div><div class="roll-die"><span id="rollNumber">${value ?? '?'}</span></div><div class="roll-detail">${stage === 'rolling' ? 'กำลังทอย…' : `ทอยได้ ${value ?? '—'}${kind === 'catch' && result ? ` · ${esc(POKEMON[result.species].name)}` : ''}`}</div></div></div>`;
@@ -122,6 +127,7 @@ function drawSuspense(stage, value) {
 function finishSuspense() {
   if (!suspense) return;
   clearInterval(suspense.interval); clearTimeout(suspense.timer); clearTimeout(suspense.watchdog);
+  board.clearDie();
   const latest = suspense.latest;
   suspense = null;
   $('rollOverlay').innerHTML = '';
@@ -134,15 +140,17 @@ function revealSuspense() {
   clearInterval(suspense.interval);
   const value = suspense.outcomeValue ?? suspense.value;
   suspense.result = suspense.outcomeCatch || null;
+  if (suspense.kind === 'move') board.landDie(value);
   drawSuspense('result', value);
-  suspense.timer = setTimeout(finishSuspense, 1400);
+  suspense.timer = setTimeout(finishSuspense, suspense.kind === 'move' ? 950 : 1400);
 }
 function beginSuspense(kind) {
   if (suspense) return false;
   if (socket?.readyState !== WebSocket.OPEN) { toast('ยังไม่เชื่อมต่อเซิร์ฟเวอร์'); return false; }
   suspense = { kind, started: performance.now(), value: 1, latest: null, result: null, interval: null, timer: null, watchdog: null, revealing: false };
+  if (kind === 'move') board.startDie();
   drawSuspense('rolling', 1);
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) suspense.interval = setInterval(() => {
+  if (kind !== 'move' && !matchMedia('(prefers-reduced-motion: reduce)').matches) suspense.interval = setInterval(() => {
     if (!suspense || suspense.revealing) return;
     suspense.value = suspense.value % 6 + 1;
     const face = $('rollNumber'); if (face) face.textContent = suspense.value;

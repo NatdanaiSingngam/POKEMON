@@ -441,6 +441,52 @@ export function createBoard(mount) {
     creature(scene, -3.7, 6.8, '#ed985d', 'dragon'),
   ];
 
+  // A physical die sits on the playfield while the authoritative roll is pending.
+  function dieFace(number) {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fffdf1'; ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = '#d0d9d2'; ctx.lineWidth = 5; ctx.strokeRect(4, 4, 120, 120);
+    const pips = {
+      1: [[64, 64]], 2: [[35, 35], [93, 93]],
+      3: [[35, 35], [64, 64], [93, 93]],
+      4: [[35, 35], [93, 35], [35, 93], [93, 93]],
+      5: [[35, 35], [93, 35], [64, 64], [35, 93], [93, 93]],
+      6: [[35, 32], [93, 32], [35, 64], [93, 64], [35, 96], [93, 96]],
+    };
+    ctx.fillStyle = number === 1 ? '#df5266' : '#2a4150';
+    for (const [x, y] of pips[number]) { ctx.beginPath(); ctx.arc(x, y, number === 1 ? 15 : 11, 0, Math.PI * 2); ctx.fill(); }
+    const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter; return new THREE.MeshStandardMaterial({ map: texture, roughness: .46 });
+  }
+  const dieFaces = [3, 4, 1, 6, 2, 5].map(dieFace);
+  const die = new THREE.Group(); die.visible = false; scene.add(die);
+  const dieBody = new THREE.Mesh(new THREE.BoxGeometry(1.24, 1.24, 1.24), dieFaces);
+  dieBody.castShadow = true; dieBody.receiveShadow = true; die.add(dieBody);
+  die.add(new THREE.LineSegments(new THREE.EdgesGeometry(dieBody.geometry), new THREE.LineBasicMaterial({ color: '#6b817f', transparent: true, opacity: .65 })));
+  const dieShadow = new THREE.Mesh(new THREE.CircleGeometry(.95, 32), new THREE.MeshBasicMaterial({ color: '#173b3a', transparent: true, opacity: .25, depthWrite: false }));
+  dieShadow.rotation.x = -Math.PI / 2; dieShadow.position.set(0, .35, 0); dieShadow.visible = false; scene.add(dieShadow);
+  const topNormals = { 1: [0, 1, 0], 2: [0, 0, 1], 3: [1, 0, 0], 4: [-1, 0, 0], 5: [0, 0, -1], 6: [0, -1, 0] };
+  let dieMotion = null;
+  function startDie() {
+    die.visible = dieShadow.visible = motionAllowed;
+    die.position.set(-2.5, 3.8, -1.2); die.rotation.set(.3, .4, .2);
+    dieMotion = { stage: 'rolling', started: performance.now() };
+  }
+  function landDie(value) {
+    if (!dieMotion || !topNormals[value]) return;
+    const normal = new THREE.Vector3(...topNormals[value]);
+    if (!motionAllowed) {
+      die.visible = dieShadow.visible = true;
+      die.position.set(0, .99, 0);
+      die.quaternion.setFromUnitVectors(normal, new THREE.Vector3(0, 1, 0));
+      dieMotion = null;
+      return;
+    }
+    dieMotion = { stage: 'landing', started: performance.now(), from: die.quaternion.clone(), to: new THREE.Quaternion().setFromUnitVectors(normal, new THREE.Vector3(0, 1, 0)), x: die.position.x, z: die.position.z, y: die.position.y };
+  }
+  function clearDie() { die.visible = dieShadow.visible = false; dieMotion = null; }
+
   const avatarMap = new Map();
   const highlight = new THREE.Mesh(new THREE.RingGeometry(.58, .67, 32), new THREE.MeshBasicMaterial({ color: '#ffe07b', side: THREE.DoubleSide }));
   highlight.rotation.x = -Math.PI / 2; highlight.position.y = .315; scene.add(highlight);
@@ -532,6 +578,22 @@ export function createBoard(mount) {
     const now = performance.now(), dt = Math.min((now - previousFrame) / 1000, .05);
     previousFrame = now; elapsed += dt;
     const time = elapsed;
+    if (dieMotion) {
+      const t = Math.max(0, (now - dieMotion.started) / 1000);
+      if (dieMotion.stage === 'rolling') {
+        const travel = Math.min(t / .9, 1), eased = 1 - (1 - travel) ** 3;
+        die.position.set(-2.5 * (1 - eased), .98 + 2.85 * (1 - travel) ** 2 + Math.abs(Math.sin(t * 16)) * .42 * (1 - travel), -1.2 * (1 - eased));
+        die.rotation.set(.3 + t * 15, .4 + t * 11, .2 + t * 13);
+      } else {
+        const settle = Math.min(t / .58, 1), eased = 1 - (1 - settle) ** 3;
+        die.position.set(dieMotion.x * (1 - eased), .99 + Math.abs(Math.sin(settle * Math.PI * 2)) * .23 * (1 - settle), dieMotion.z * (1 - eased));
+        die.quaternion.slerpQuaternions(dieMotion.from, dieMotion.to, eased);
+      }
+      dieShadow.position.x = die.position.x; dieShadow.position.z = die.position.z;
+      dieShadow.material.opacity = .3 / (1 + Math.max(0, die.position.y - 1) * .6);
+      const shadowScale = 1 + Math.max(0, die.position.y - 1) * .2;
+      dieShadow.scale.set(shadowScale, shadowScale, shadowScale);
+    }
     for (const avatar of avatarMap.values()) {
       const route = avatar.userData.route;
       if (route?.length) {
@@ -563,5 +625,5 @@ export function createBoard(mount) {
     orbit.update(); renderer.render(scene,camera);
   }
   frame();
-  return { sync, isMoving(id) { return Boolean(avatarMap.get(id)?.userData.route?.length); }, setInteractive(enabled) { orbit.enabled = enabled; }, dispose() { active=false; observer.disconnect(); orbit.dispose(); renderer.dispose(); mount.removeChild(renderer.domElement); } };
+  return { sync, startDie, landDie, clearDie, isMoving(id) { return Boolean(avatarMap.get(id)?.userData.route?.length); }, setInteractive(enabled) { orbit.enabled = enabled; }, dispose() { active=false; observer.disconnect(); orbit.dispose(); renderer.dispose(); mount.removeChild(renderer.domElement); } };
 }

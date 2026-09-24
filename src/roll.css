@@ -1,5 +1,10 @@
 #rollOverlay:empty{display:none}
 #rollOverlay{position:absolute;inset:0;z-index:5;display:grid;place-items:center;pointer-events:none}
+.roll-world-label{position:absolute;top:23%;left:50%;transform:translateX(-50%);display:grid;justify-items:center;gap:2px;min-width:158px;padding:6px 15px;background:#fffae5ed;border:3px solid #294a51;border-radius:8px;box-shadow:5px 5px 0 #163b42bb;color:#22434b;text-align:center;font:700 14px 'Chakra Petch',sans-serif;white-space:nowrap}
+.roll-world-label strong{font-size:34px;line-height:1;color:#da4e62}
+.roll-world-label small{font-size:11px;color:#4e6d70}
+.roll-world-label.is-result{animation:world-result-pop .28s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes world-result-pop{from{opacity:.3;transform:translate(-50%,-12px) scale(.8)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
 .roll-shade{position:absolute;inset:0;display:grid;place-items:center;padding:18px;pointer-events:none}
 .roll-card{width:min(90vw,310px);min-height:225px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;background:none;border:0;box-shadow:none;text-align:center;padding:10px;color:#173b46;filter:drop-shadow(2px 3px 1px #fff9e9)}
 .roll-label{font:700 19px 'Chakra Petch',sans-serif;letter-spacing:1px}
@@ -22,3 +27,5 @@
 @keyframes die-land{from{transform:translateY(-36px) rotate(-28deg) scale(.78)}to{transform:translateY(0) rotate(0) scale(1)}}
 @keyframes result-pop{from{filter:brightness(1.5)}to{filter:brightness(1)}}
 @media(prefers-reduced-motion:reduce){.roll-card.is-rolling .roll-die,.roll-card.is-rolling .roll-die span,.roll-card.is-result .roll-die,.roll-card.is-result{animation:none}}
+@media(max-width:600px){.roll-world-label{top:23%;font-size:12px;min-width:130px;padding:5px 8px}}
+@media(prefers-reduced-motion:reduce){.roll-world-label.is-result{animation:none}}
