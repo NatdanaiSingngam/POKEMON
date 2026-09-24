@@ -22,10 +22,13 @@ function tileTexture(tile, index) {
   const ink = '#252a2b', gray = '#7c8888', white = '#f7f9f5';
   const rect = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
   const px = (x, y, w, h, color = ink) => rect(16 + x * 4, 5 + y * 4, w * 4, h * 4, color);
-  rect(0, 0, 96, 96, tile.type === 'start' || tile.type === 'villain' || tile.type === 'legendary' ? '#d9e0df' : '#f1f4f1');
+  rect(0, 0, 96, 96, {
+    start: '#d4dadd', villain: '#e8a643', legendary: '#55c969',
+    city: '#c1c6ce', cave: '#e3efd0', gym: '#4d4447',
+  }[tile.type] || '#f7f9f8');
   rect(0, 0, 96, 3, '#83908c'); rect(0, 93, 96, 3, '#83908c');
   rect(0, 0, 3, 96, '#83908c'); rect(93, 0, 3, 96, '#83908c');
-  if (index % 10 !== 0) {
+  if (index % 10 !== 0 && ['wild', 'quest', 'event'].includes(tile.type)) {
     const side = Math.floor((index - 1) / 10);
     if (side === 0) rect(4, 88, 88, 7, zoneColor);
     if (side === 1) rect(2, 4, 8, 88, zoneColor);
@@ -37,24 +40,25 @@ function tileTexture(tile, index) {
     ring.forEach(([x,y,w,h]) => px(x,y,w,h,zoneColor));
     px(6,6,4,4,white); px(7,7,2,2,zoneColor);
   } else if (tile.type === 'quest') {
-    px(6,1,4,2,'#c52d4b'); px(5,3,6,2,'#d93151'); px(6,5,4,5,'#d93151');
-    px(7,10,2,1,'#b71d3f'); px(6,12,4,2,'#d93151'); px(7,14,2,1,'#b71d3f');
+    px(5,2,6,2,'#3679c0'); px(9,4,2,3,'#3679c0'); px(7,7,3,2,'#3679c0');
+    px(6,9,2,2,'#3679c0'); px(6,13,2,2,'#3679c0');
   } else if (tile.type === 'event') {
     px(8,0,3,2,'#f0cb49'); px(7,2,3,2,'#e9bd34'); px(6,4,3,2,'#f0cb49');
     px(5,6,7,2,'#e9bd34'); px(8,8,3,2,'#f0cb49'); px(7,10,3,2,'#e9bd34'); px(6,12,3,2,'#f0cb49');
-  } else if (tile.type === 'city' || tile.type === 'gym') {
+  } else if (tile.type === 'city') {
     px(2,2,12,1,ink); px(1,3,14,1,gray); px(2,4,12,10,ink);
     px(3,5,10,8,white); px(4,6,8,1,gray); px(4,8,8,1,gray); px(4,11,8,1,gray);
-    if (tile.type === 'city') { px(5,7,2,1,ink); px(9,7,2,1,ink); px(5,9,2,2,ink); px(9,9,2,2,ink); }
-    else { px(5,7,2,4,ink); px(8,7,3,4,ink); px(4,12,8,1,ink); }
+    px(5,7,2,1,ink); px(9,7,2,1,ink); px(5,9,2,2,ink); px(9,9,2,2,ink);
     px(1,14,14,1,ink);
+  } else if (tile.type === 'gym') {
+    ctx.fillStyle = '#e6c98e'; ctx.font = 'bold 50px Georgia'; ctx.textAlign = 'center';
+    ctx.fillText('Ⅲ', 48, 65);
   } else if (tile.type === 'cave') {
-    px(2,11,12,4,'#253b48'); px(3,7,10,4,'#435865'); px(5,4,6,3,'#5f7480');
-    px(6,9,4,6,'#172f3c'); px(7,5,2,3,'#b3c6c9');
+    px(5,3,6,2,'#f8f7e9'); px(3,5,10,5,'#f8f7e9'); px(5,10,6,3,'#f8f7e9');
   } else if (tile.type === 'villain') {
-    px(2,7,12,5,ink); px(4,5,7,2,gray); px(5,6,4,2,white); px(11,8,3,3,'#737d7b');
-    px(3,10,2,3,ink); px(11,10,2,3,ink); px(4,12,2,2,gray); px(10,12,2,2,gray);
-    px(1,7,2,2,gray); px(13,6,2,2,gray); px(6,9,3,2,white);
+    px(2,7,12,5,white); px(4,5,7,2,'#bfc7c5'); px(5,6,4,2,white); px(11,8,3,3,'#a9b5b3');
+    px(3,10,2,3,gray); px(11,10,2,3,gray); px(4,12,2,2,gray); px(10,12,2,2,gray);
+    px(1,7,2,2,white); px(13,6,2,2,white); px(6,9,3,2,'#d9e3df');
   } else if (tile.type === 'legendary') {
     px(5,2,6,2,ink); px(3,4,10,2,ink); px(2,6,12,5,ink); px(4,11,8,2,ink);
     px(5,13,2,2,ink); px(9,13,2,2,ink); px(4,7,2,2,white); px(10,7,2,2,white);
@@ -63,11 +67,7 @@ function tileTexture(tile, index) {
     px(5,2,6,1,ink); px(3,3,10,3,'#e7ebea'); px(2,6,12,4,'#e44d59');
     px(2,9,12,1,ink); px(3,10,10,3,white); px(5,13,6,1,ink); px(6,7,4,4,ink); px(7,8,2,2,white);
   }
-  if (tile.type !== 'wild') {
-    ctx.fillStyle = ink; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const labels = { start: 'เริ่ม', city: 'เมือง', quest: 'เควส', event: 'สุ่ม', gym: 'ยิม', cave: 'ถ้ำ', villain: 'วายร้าย', legendary: 'ตำนาน' };
-    ctx.fillText(labels[tile.type] || '', 48, 79, 86);
-  }
+  if (tile.type === 'start') { ctx.fillStyle = ink; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('เริ่มต้น', 48, 87); }
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter; texture.minFilter = THREE.NearestFilter;
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -83,16 +83,18 @@ function tilePosition(i) {
 const POSITIONS = TILES.map((_, i) => tilePosition(i));
 
 function pixelGroundTexture() {
-  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 64;
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
   const ctx = canvas.getContext('2d');
-  for (let z = 0; z < 64; z++) for (let x = 0; x < 64; x++) {
-    const dx = (x - 31.5) / 31.5, dz = (z - 31.5) / 31.5;
-    const radius = Math.hypot(dx, dz);
-    const jag = Math.sin(x * 1.93 + z * .43) * .028 + Math.cos(z * 1.65 - x * .37) * .02;
-    let color = radius < .23 + jag ? '#dedbb1' : radius < .78 + jag ? '#faf7df' : '#86d651';
-    if (radius > .79 && (x * 13 + z * 19) % 31 === 0) color = '#97d86d';
-    if (radius < .77 && radius > .27 && (x * 7 + z * 11) % 47 === 0) color = '#d9d4aa';
-    ctx.fillStyle = color; ctx.fillRect(x, z, 1, 1);
+  ctx.fillStyle = '#86d86b'; ctx.fillRect(0, 0, 256, 256);
+  for (const [x, y, w, h] of [[29,25,64,49],[143,31,72,64],[52,106,75,72],[140,144,67,65]]) {
+    ctx.fillStyle = '#8cda70'; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = '#71bf60'; ctx.fillRect(x, y + h - 2, w, 2);
+    ctx.fillRect(x + w - 2, y, 2, h);
+  }
+  for (let i = 0; i < 85; i++) {
+    const x = (i * 59 + 17) % 250, y = (i * 97 + 39) % 250;
+    ctx.fillStyle = i % 5 ? '#7bcc63' : '#dff1ad';
+    ctx.fillRect(x, y, i % 7 ? 2 : 4, 2);
   }
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter; texture.minFilter = THREE.NearestFilter;
@@ -367,10 +369,6 @@ export function createBoard(mount) {
   // Keep the middle clear so draw effects can appear without permanent card stacks.
   const center = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: pixelGroundTexture(), toneMapped: false }));
   center.rotation.x = -Math.PI / 2; center.position.y = .09; center.receiveShadow = true; scene.add(center);
-  const emblem = new THREE.Group(); emblem.position.y = .13; scene.add(emblem);
-  const outer = new THREE.Mesh(new THREE.RingGeometry(.48, .66, 24), mat('#f8f6dc')); outer.rotation.x = -Math.PI / 2; emblem.add(outer);
-  const inner = new THREE.Mesh(new THREE.CircleGeometry(.23, 24), mat('#f8f6dc')); inner.rotation.x = -Math.PI / 2; inner.position.y = .005; emblem.add(inner);
-  cube(emblem, 1.23, .012, .075, '#f8f6dc', 0, .01, 0, false);
 
   const battleBackdrop = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: '#191b1c' }));
   battleBackdrop.rotation.x = -Math.PI / 2; battleBackdrop.position.y = -.86; battleBackdrop.visible = false; scene.add(battleBackdrop);
@@ -411,7 +409,7 @@ export function createBoard(mount) {
     const side = i === 0 ? 0 : Math.floor((i - 1) / 10);
     const stripZ = side === 0 ? .45 : side === 2 ? -.45 : 0;
     const stripX = side === 1 ? -.45 : side === 3 ? .45 : 0;
-    cube(scene, side % 2 ? .17 : 1.04, .013, side % 2 ? 1.04 : .17, accent, x + stripX, .29, z + stripZ, false);
+    if (['wild', 'quest', 'event'].includes(tile.type)) cube(scene, side % 2 ? .17 : 1.04, .013, side % 2 ? 1.04 : .17, accent, x + stripX, .29, z + stripZ, false);
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(1.02, 1.02), tileTexture(tile, i));
     plane.rotation.x = -Math.PI / 2;
     plane.position.set(x, .297, z); scene.add(plane);
@@ -525,7 +523,7 @@ export function createBoard(mount) {
   function sync(state) {
     if (!state?.players) return;
     const battle = state.phase === 'playing' && state.battle && ['battle_pick', 'battle_roll'].includes(state.step) ? state.battle : null;
-    arena.visible = Boolean(battle); battleBackdrop.visible = Boolean(battle); emblem.visible = !battle;
+    arena.visible = Boolean(battle); battleBackdrop.visible = Boolean(battle);
     scene.background.set(battle ? '#191b1c' : '#8bc3cf');
     scene.fog.color.set(battle ? '#191b1c' : '#8bc3cf');
     if (battle) battle.sides.forEach((side, index) => {
