@@ -1,4 +1,5 @@
 import { monArt } from './art.js';
+import { EXTRA_POKEDEX } from './gen1-extra.js';
 
 export const POKEDEX = {
   bulbasaur: 1, charmander: 4, squirtle: 7, magikarp: 129, rattata: 19, raticate: 20,
@@ -10,6 +11,7 @@ export const POKEDEX = {
   lapras: 131, snorlax: 143, ditto: 132, chansey: 113, aerodactyl: 142,
   scyther: 123, tauros: 128, kangaskhan: 115,
   mewtwo: 150, articuno: 144, zapdos: 145, moltres: 146,
+  ...EXTRA_POKEDEX,
 };
 
 export function pokemonPortrait(species, size = '') {

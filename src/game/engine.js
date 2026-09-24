@@ -14,11 +14,13 @@ export function createGame(participants, rng = Math.random) {
       coins: 10, balls: { basic: 5, great: 0, ultra: 0 },
       pokemon: [{ uid: `starter-${index}`, species, hp: POKEMON[species].hp, caughtZone: 'starter' }],
       items: [], moveBonus: 0, badges: [], quest: null, caveTurns: 0,
+      seenPokemon: [species], recentPokemon: [],
     };
   });
   const game = {
     phase: 'playing', players, turn: 0, step: 'roll', pending: null, battle: null,
     serial: 1, lastRoll: null, lastCatch: null, lastBattle: null, notice: null, result: null,
+    encounterHistory: [],
     log: ['เริ่มเกมแล้ว — วนกระดานคนละ 3 รอบ แล้วนับเงิน'],
     rngSeed: Math.floor(rng() * 1000000),
   };
@@ -71,6 +73,23 @@ function endTurn(game, rng) {
 function makePokemon(game, species, zone) {
   return { uid: `mon-${game.serial++}`, species, hp: POKEMON[species].hp, caughtZone: zone };
 }
+function pickPokemonForPlayer(game, p, pool, rng) {
+  const seen = new Set(p.seenPokemon || []);
+  const owned = new Set(p.pokemon.map(mon => mon.species));
+  const recent = new Set(p.recentPokemon || []);
+  const globalSeen = new Set(game.encounterHistory || []);
+  let candidates = pool.filter(species => !seen.has(species) && !globalSeen.has(species) && !owned.has(species));
+  if (!candidates.length) candidates = pool.filter(species => !seen.has(species) && !owned.has(species));
+  if (!candidates.length) candidates = pool.filter(species => !seen.has(species));
+  if (!candidates.length) candidates = pool.filter(species => !owned.has(species) && !recent.has(species));
+  if (!candidates.length) candidates = pool.filter(species => !owned.has(species));
+  if (!candidates.length) candidates = pool.filter(species => !recent.has(species));
+  const species = pick(candidates.length ? candidates : pool, rng);
+  p.seenPokemon = [...seen, species];
+  p.recentPokemon = [...(p.recentPokemon || []), species].slice(-5);
+  game.encounterHistory = [...globalSeen, species];
+  return species;
+}
 function advanceQuest(game, p, event, rng) {
   if (!p.quest || QUESTS[p.quest.id]?.event !== event) return;
   p.quest.progress++;
@@ -83,7 +102,7 @@ function advanceQuest(game, p, event, rng) {
     if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
     else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
   } else {
-    const species = pick([...POOLS.green, ...POOLS.blue], rng);
+    const species = pickPokemonForPlayer(game, p, [...POOLS.green, ...POOLS.blue], rng);
     if (p.pokemon.length < MAX_POKEMON) { p.pokemon.push(makePokemon(game, species, POKEMON[species].zone)); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และ ${POKEMON[species].name}`); }
     else { p.coins += 5; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 5} เหรียญ (ทีมเต็ม)`); }
   }
@@ -100,13 +119,13 @@ function offerNpcBattle(game, rng, kind) {
 }
 function offerWild(game, rng) {
   const p = current(game), zone = TILES[p.position].zone;
-  const species = pick(POOLS[zone], rng);
+  const species = pickPokemonForPlayer(game, p, POOLS[zone], rng);
   game.pending = { kind: 'catch', species, zone, legendary: false };
   game.step = 'capture';
   log(game, `${p.name} พบ ${POKEMON[species].name} ใน${ZONES[zone].name}`);
 }
 function offerLegendary(game, rng) {
-  const p = current(game), species = pick(POOLS.legendary, rng);
+  const p = current(game), species = pickPokemonForPlayer(game, p, POOLS.legendary, rng);
   if (activePokemon(p).length === 0) {
     log(game, `${p.name} ไม่มีโปเกมอนที่ต่อสู้ได้ จึงผ่านช่องตำนาน`);
     endTurn(game, rng);

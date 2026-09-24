@@ -1,3 +1,5 @@
+import { EXTRA_EVOLUTIONS, EXTRA_POKEMON } from './gen1-extra.js';
+
 export const MAX_POKEMON = 6;
 export const MAX_ITEMS = 6;
 export const LAPS_TO_WIN = 3;
@@ -68,6 +70,7 @@ export const POKEMON = {
   articuno: p('ฟรีเซอร์', 'legendary', 13, 6, 23, '#8bcce4', 'bird', 'dodge', 'ลดความเสียหายครั้งแรก 1'),
   zapdos: p('ธันเดอร์', 'legendary', 12, 7, 23, '#ebc857', 'bird', 'power', 'โจมตีครั้งแรก +1'),
   moltres: p('ไฟเยอร์', 'legendary', 12, 7, 23, '#e77e55', 'bird', 'heal', 'หลังชนะฟื้น 1 HP'),
+  ...EXTRA_POKEMON,
 };
 
 export const POOLS = Object.fromEntries(['green', 'blue', 'purple', 'red', 'legendary'].map(zone => [
@@ -80,6 +83,7 @@ export const EVOLUTIONS = {
   pidgey: 'pidgeotto', pidgeotto: 'pidgeot', caterpie: 'metapod', metapod: 'butterfree',
   oddish: 'gloom', gloom: 'vileplume', dratini: 'dragonair', dragonair: 'dragonite',
   nidoran: 'nidorina', nidorina: 'nidoqueen', pikachu: 'raichu',
+  ...EXTRA_EVOLUTIONS,
 };
 
 export const QUESTS = {
