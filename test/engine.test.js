@@ -108,6 +108,46 @@ test('city restores fainted Pokemon HP', () => {
   assert.equal(p.pokemon[0].hp, POKEMON[p.pokemon[0].species].hp);
 });
 
+test('shop sells the pictured balls and movement cards at their displayed prices', () => {
+  const game = createGame(people), p = game.players[0];
+  p.items = []; p.position = 4;
+  run(game, p.id, { type: 'roll' }, 1);
+  assert.equal(game.step, 'shop');
+  run(game, p.id, { type: 'buy', id: 'great' });
+  assert.equal(p.coins, 8);
+  run(game, p.id, { type: 'buy', id: 'bicycle' });
+  assert.equal(p.coins, 3);
+  assert.deepEqual(p.items, ['bicycle']);
+  assert.equal(applyAction(game, p.id, { type: 'useItem', index: 0 }).ok, false, 'movement item is for before rolling');
+});
+
+test('repel and bicycle replace the roll and start still stops movement', () => {
+  const repelGame = createGame(people), repelPlayer = repelGame.players[0];
+  repelPlayer.items = ['repel'];
+  run(repelGame, repelPlayer.id, { type: 'useItem', index: 0 });
+  assert.equal(repelPlayer.position, 2);
+  assert.equal(repelGame.step, 'quest_choice');
+  assert.equal(repelPlayer.items.length, 0);
+
+  const bikeGame = createGame(people), bikePlayer = bikeGame.players[0];
+  bikePlayer.items = ['bicycle']; bikePlayer.position = 38;
+  run(bikeGame, bikePlayer.id, { type: 'useItem', index: 0 });
+  assert.equal(bikePlayer.position, 0);
+  assert.equal(bikePlayer.laps, 1);
+  assert.equal(bikeGame.step, 'sale');
+  assert.equal(bikePlayer.balls.basic, 8);
+});
+
+test('rare candy evolves a chosen team member and restores HP', () => {
+  const game = createGame(people), p = game.players[0];
+  p.items = ['rare_candy']; p.pokemon[0].hp = 1;
+  assert.equal(applyAction(game, p.id, { type: 'useItem', index: 0, targetId: 'missing' }).ok, false);
+  run(game, p.id, { type: 'useItem', index: 0, targetId: p.pokemon[0].uid });
+  assert.equal(p.pokemon[0].species, 'charmeleon');
+  assert.equal(p.pokemon[0].hp, POKEMON.charmeleon.hp);
+  assert.equal(p.items.length, 0);
+});
+
 test('encounter pools follow first, second, third and rare categories', () => {
   const first = ['bulbasaur','charmander','squirtle','magikarp','rattata','pidgey','caterpie','oddish','dratini','nidoran'];
   const second = ['ivysaur','charmeleon','wartortle','metapod','pidgeotto','gloom','dragonair','nidorina','pikachu','gyarados','raticate'];

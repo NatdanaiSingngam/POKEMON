@@ -54,3 +54,4 @@ npm.cmd run smoke:production
 
 โมเดล 3D เป็นงานสร้างจากรูปทรงเรขาคณิตในโค้ด จึงไม่ต้องดาวน์โหลดไฟล์โมเดลเพิ่ม
 ภาพโปเกมอน 42 ตัวใน `public/pokemon-art/` มาจาก [PokéAPI sprites](https://github.com/PokeAPI/sprites/tree/master/sprites/pokemon/other/official-artwork) และเก็บไว้ในโปรเจกต์เพื่อให้เกมแสดงภาพได้แม้ไม่ได้เชื่อมต่อแหล่งภาพภายนอก
+ภาพไอเทมพิกเซลใน `public/shop-icons/` มาจาก [PokéAPI sprites](https://github.com/PokeAPI/sprites/tree/master/sprites/items) และเก็บไว้ในโปรเจกต์เช่นกัน

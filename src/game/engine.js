@@ -265,6 +265,22 @@ function legalActor(game, actorId, action) {
   if (current(game).id !== actorId) return 'ยังไม่ถึงตาของคุณ';
   return null;
 }
+function movePlayer(game, p, value, rng, source = 'die') {
+  const from = p.position;
+  const movedByItem = source !== 'die';
+  game.lastRoll = { playerId: p.id, value, from, to: (from + value) % TILES.length, source };
+  if (from + value >= TILES.length) {
+    p.position = 0; p.laps++;
+    p.balls.basic += 3;
+    game.lastRoll.to = 0;
+    game.pending = { kind: 'sale' }; game.step = 'sale';
+    log(game, `${p.name} ${movedByItem ? `ใช้ ${ITEMS[source].name} เดิน ${value} ช่อง` : `ทอยได้ ${value}`} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก`);
+  } else {
+    p.position = from + value;
+    log(game, `${p.name} ${movedByItem ? `ใช้ ${ITEMS[source].name} เดิน ${value} ช่อง` : `ทอยได้ ${value}`} ไปช่อง ${p.position + 1}`);
+    resolveTile(game, rng);
+  }
+}
 
 export function applyAction(game, actorId, action, rng = Math.random) {
   if (!action || typeof action.type !== 'string') return { ok: false, error: 'คำสั่งไม่ถูกต้อง' };
@@ -275,19 +291,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
 
   if (action.type === 'roll') {
     if (game.step !== 'roll') return fail('ตอนนี้ยังทอยไม่ได้');
-    const value = die(rng), from = p.position;
-    game.lastRoll = { playerId: p.id, value, from, to: (from + value) % 40 };
-    if (from + value >= TILES.length) {
-      p.position = 0; p.laps++;
-      p.balls.basic += 3;
-      game.lastRoll.to = 0;
-      game.pending = { kind: 'sale' }; game.step = 'sale';
-      log(game, `${p.name} ทอยได้ ${value} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก`);
-    } else {
-      p.position = from + value;
-      log(game, `${p.name} ทอยได้ ${value} ไปช่อง ${p.position + 1}`);
-      resolveTile(game, rng);
-    }
+    movePlayer(game, p, die(rng), rng);
   } else if (action.type === 'chooseQuest') {
     if (game.step !== 'quest_choice') return fail('ตอนนี้รับเควสไม่ได้');
     if (!['accept', 'keep', 'skip'].includes(action.choice)) return fail('ตัวเลือกเควสไม่ถูกต้อง');
@@ -409,6 +413,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
   } else if (action.type === 'useItem') {
     const idx = Number(action.index), itemId = p?.items[idx], item = ITEMS[itemId];
     if (!Number.isInteger(idx) || !item) return fail('ไม่มีไอเทมใบนี้');
+    const movement = { repel: 2, super_repel: 4, bicycle: 6 }[itemId];
     if (game.step === 'battle_roll') {
       if (item.timing !== 'battle') return fail('ไอเทมนี้ใช้ได้เฉพาะนอกการต่อสู้');
       if (game.battle.usedItem.includes(actorId)) return fail('ใช้ไอเทมในศึกนี้แล้ว');
@@ -416,6 +421,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       const otherId = game.battle.sides.find(id => id !== actorId);
       if (!own) return fail('ยังไม่ได้เลือกโปเกมอน');
       if (itemId === 'potion') own.hp = Math.min(POKEMON[own.species].hp, own.hp + 3);
+      if (itemId === 'super_potion') own.hp = Math.min(POKEMON[own.species].hp, own.hp + 6);
       if (itemId === 'power_up') game.battle.effects[`${actorId}:power`] = 2;
       if (itemId === 'smoke') game.battle.effects[`${otherId}:smoke`] = 2;
       if (itemId === 'shield') game.battle.effects[`${actorId}:shield`] = 2;
@@ -424,17 +430,22 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       if (!['roll', 'shop'].includes(game.step)) return fail('ตอนนี้ใช้ไอเทมนอกการต่อสู้ไม่ได้');
       if (item.timing !== 'outside') return fail('ไอเทมนี้ใช้ได้เฉพาะระหว่างต่อสู้');
       if (p.usedOutside) return fail('ใช้ไอเทมนอกการต่อสู้ในเทิร์นนี้แล้ว');
+      if (movement && game.step !== 'roll') return fail('ไอเทมเดินใช้ได้ก่อนทอยเท่านั้น');
       const target = item.target === 'other' ? player(game, action.targetId) : p;
       if (!target || (item.target === 'other' && (target.id === p.id || target.done))) return fail('เป้าหมายไม่ถูกต้อง');
+      const candyTarget = itemId === 'rare_candy' ? p.pokemon.find(mon => mon.uid === action.targetId && EVOLUTIONS[mon.species]) : null;
+      if (itemId === 'rare_candy' && !candyTarget) return fail('เลือกโปเกมอนที่พัฒนาร่างได้');
       if (itemId === 'lucky_coin') p.coins += 3;
       if (itemId === 'pickpocket') { const amount = Math.min(2, target.coins); target.coins -= amount; p.coins += amount; }
       if (itemId === 'full_heal') healTeam(p);
+      if (candyTarget) { candyTarget.species = EVOLUTIONS[candyTarget.species]; candyTarget.hp = POKEMON[candyTarget.species].hp; }
       if (itemId === 'ball_box') p.balls.basic += 3;
       if (itemId === 'tax_notice') target.coins = Math.max(0, target.coins - 2);
       p.usedOutside = true;
     }
     p.items.splice(idx, 1);
     log(game, `${p.name} ใช้ ${item.name}`);
+    if (movement) movePlayer(game, p, movement, rng, itemId);
   } else return fail('ไม่รู้จักคำสั่งนี้');
   return { ok: true };
 }

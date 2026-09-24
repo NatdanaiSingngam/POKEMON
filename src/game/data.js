@@ -11,8 +11,8 @@ export const ZONES = {
 
 export const BALLS = {
   basic: { name: 'บอลแดง', color: '#f26970', bonus: 0, price: 1 },
-  great: { name: 'บอลน้ำเงิน', color: '#4598e6', bonus: 1, price: 3 },
-  ultra: { name: 'บอลดำ', color: '#303c4b', bonus: 2, price: 5 },
+  great: { name: 'บอลน้ำเงิน', color: '#4598e6', bonus: 1, price: 2 },
+  ultra: { name: 'บอลดำ', color: '#303c4b', bonus: 2, price: 3 },
 };
 
 export const ROLES = {
@@ -91,14 +91,20 @@ export const QUESTS = {
 export const ITEMS = {
   lucky_coin: { name: 'เหรียญนำโชค', icon: '✦', timing: 'outside', target: 'self', price: 4, text: 'รับเงิน 3 เหรียญ' },
   pickpocket: { name: 'มือไว', icon: '✋', timing: 'outside', target: 'other', price: 4, text: 'รับเงินจากคู่แข่งไม่เกิน 2 เหรียญ' },
-  full_heal: { name: 'ยาฟื้นทีม', icon: '✚', timing: 'outside', target: 'self', price: 3, text: 'ฟื้น HP โปเกมอนทั้งทีมจนเต็ม' },
+  full_heal: { name: 'ยาฟื้นทีม', icon: '✚', timing: 'outside', target: 'self', price: 2, text: 'ฟื้น HP โปเกมอนทั้งทีมจนเต็ม' },
   ball_box: { name: 'กล่องโปเกบอล', icon: '◉', timing: 'outside', target: 'self', price: 3, text: 'รับบอลแดง 3 ลูก' },
   tax_notice: { name: 'ใบเรียกเก็บ', icon: '▧', timing: 'outside', target: 'other', price: 3, text: 'คู่แข่งเสียเงิน 2 เหรียญ' },
-  potion: { name: 'ยาฉุกเฉิน', icon: '✚', timing: 'battle', target: 'self', price: 3, text: 'ฟื้น HP ตัวที่สู้ 3 หน่วย' },
+  potion: { name: 'ยารักษา', icon: '✚', timing: 'battle', target: 'self', price: 1, text: 'ฟื้น HP ตัวที่สู้ 3 หน่วย' },
+  super_potion: { name: 'ยารักษาขั้นสูง', icon: '✚', timing: 'battle', target: 'self', price: 2, text: 'ฟื้น HP ตัวที่สู้ 6 หน่วย' },
+  repel: { name: 'รีเพล', icon: '↗', timing: 'outside', target: 'self', price: 1, text: 'ใช้ก่อนทอยเพื่อเดิน 2 ช่อง' },
+  super_repel: { name: 'ซูเปอร์รีเพล', icon: '↗', timing: 'outside', target: 'self', price: 2, text: 'ใช้ก่อนทอยเพื่อเดิน 4 ช่อง' },
+  rare_candy: { name: 'แคนดี้', icon: '✦', timing: 'outside', target: 'self', price: 5, text: 'พัฒนาโปเกมอน 1 ตัวและฟื้น HP เต็ม' },
+  bicycle: { name: 'จักรยาน', icon: '◆', timing: 'outside', target: 'self', price: 5, text: 'ใช้ก่อนทอยเพื่อเดิน 6 ช่อง' },
   power_up: { name: 'พลังเร่ง', icon: '⚡', timing: 'battle', target: 'self', price: 4, text: 'การโจมตีครั้งถัดไปแรงขึ้น 2' },
   smoke: { name: 'ควันแกล้ง', icon: '☁', timing: 'battle', target: 'other', price: 3, text: 'แต้มเต๋าคู่แข่งครั้งถัดไป -2' },
   shield: { name: 'โล่ฉุกเฉิน', icon: '⬡', timing: 'battle', target: 'self', price: 3, text: 'ลดความเสียหายครั้งถัดไป 2' },
 };
+export const SHOP_ITEMS = ['potion', 'super_potion', 'repel', 'super_repel', 'full_heal', 'rare_candy', 'bicycle'];
 
 const tile = (type, zone, label) => ({ type, zone, label });
 export const TILES = Array.from({ length: 40 }, (_, i) => {

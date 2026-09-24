@@ -7,8 +7,9 @@ import './roll.css';
 import './game-layout.css';
 import './battle.css';
 import './announcement.css';
+import './shop.css';
 import { createBoard } from './board.js';
-import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, ZONES } from './game/data.js';
+import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, ZONES } from './game/data.js';
 import { badgeRequirement } from './game/engine.js';
 import { monArt } from './game/art.js';
 import { POKEDEX, pokemonPortrait } from './game/artwork.js';
@@ -144,9 +145,18 @@ function itemList(me, battle = false) {
   const targets = state.players.filter(p => p.id !== me.id && !p.done);
   return me.items.length ? me.items.map((id, index) => {
     const item = ITEMS[id];
-    const canUse = allowed && item.timing === (battle ? 'battle' : 'outside') && (!battle || !state.battle.usedItem.includes(playerId));
-    return `<div class="item-card"><span class="item-icon">${item.icon}</span><div class="item-copy"><strong>${item.name}</strong>${item.text}<br><span class="muted">${item.timing === 'battle' ? 'ระหว่างสู้' : 'นอกการสู้'} · ${item.target === 'other' ? 'คู่แข่ง' : 'ตัวเอง'}</span>${canUse && item.target === 'other' && !battle ? `<select class="field item-target" aria-label="เลือกคู่แข่ง">${targets.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>` : ''}</div>${canUse ? `<button class="btn small" data-use-item="${index}">ใช้</button>` : ''}</div>`;
+    const canUse = allowed && item.timing === (battle ? 'battle' : 'outside') && (!battle || !state.battle.usedItem.includes(playerId)) && (!['repel', 'super_repel', 'bicycle'].includes(id) || state.step === 'roll') && (id !== 'rare_candy' || me.pokemon.some(mon => EVOLUTIONS[mon.species]));
+    const targetPicker = canUse && !battle && item.target === 'other' ? `<select class="field item-target" aria-label="เลือกคู่แข่ง">${targets.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>` : canUse && id === 'rare_candy' ? `<select class="field item-target" aria-label="เลือกโปเกมอนที่จะพัฒนาร่าง">${me.pokemon.filter(mon => EVOLUTIONS[mon.species]).map(mon => `<option value="${esc(mon.uid)}">${esc(POKEMON[mon.species].name)} → ${esc(POKEMON[EVOLUTIONS[mon.species]].name)}</option>`).join('')}</select>` : '';
+    const iconFile = SHOP_ITEMS.includes(id) ? id.replaceAll('_', '-') : null;
+    return `<div class="item-card"><span class="item-icon">${iconFile ? `<img src="/shop-icons/${iconFile}.png" alt="">` : item.icon}</span><div class="item-copy"><strong>${item.name}</strong>${item.text}<br><span class="muted">${item.timing === 'battle' ? 'ระหว่างสู้' : 'นอกการสู้'} · ${item.target === 'other' ? 'คู่แข่ง' : 'ตัวเอง'}</span>${targetPicker}</div>${canUse ? `<button class="btn small" data-use-item="${index}">ใช้</button>` : ''}</div>`;
   }).join('') : '<p class="muted">ยังไม่มีการ์ดไอเทม</p>';
+}
+function shopHtml() {
+  const me = state.players[state.turn];
+  const ballSprites = { basic: 'poke-ball', great: 'great-ball', ultra: 'ultra-ball' };
+  const balls = Object.entries(BALLS).map(([id, ball]) => `<button class="shop-ball" data-buy="${id}" ${me.coins < ball.price ? 'disabled' : ''} aria-label="ซื้อ${esc(ball.name)} ${ball.price} เหรียญ"><img src="/shop-icons/${ballSprites[id]}.png" alt=""><span>${esc(ball.name)}</span><b>🪙 ${ball.price}</b></button>`).join('');
+  const items = SHOP_ITEMS.map(id => { const item = ITEMS[id]; return `<button class="shop-card" data-buy="${id}" ${me.coins < item.price || me.items.length >= MAX_ITEMS ? 'disabled' : ''} aria-label="ซื้อ${esc(item.name)} ${item.price} เหรียญ"><span class="shop-card-title">${esc(id.replaceAll('_', ' ').toUpperCase())}</span><img src="/shop-icons/${id.replaceAll('_', '-')}.png" alt=""><span class="shop-card-text">${esc(item.text)}</span><b>🪙 ${item.price}</b></button>`; }).join('');
+  return `<div class="shop-shade"><section class="shop-panel" role="dialog" aria-modal="true" aria-label="ร้านค้าโปเกมอน"><div class="shop-header"><div><small>POKÉ MART</small><h2>ร้านค้า</h2></div><strong>🪙 ${me.coins}</strong></div><div class="shop-grid-pixel">${balls}${items}</div><p class="shop-limit">การ์ดไอเทม ${me.items.length}/${MAX_ITEMS} · กดการ์ดเพื่อซื้อ</p><button class="btn shop-exit" data-act="leaveShop">ออกจากร้านค้า</button></section></div>`;
 }
 function captureModalHtml() {
   if (arrivalPending || state?.phase !== 'playing' || state.step !== 'capture') return '';
@@ -207,7 +217,7 @@ function actionHtml() {
   } else if (state.step === 'wild_choice') body = `<p>มี ${esc(state.players.find(other => other.id === state.pending.opponentId)?.name)} อยู่บนช่องมอนสเตอร์ป่า คุณเลือกจับหรือท้าสู้ได้ อีกฝ่ายปฏิเสธการสู้ไม่ได้</p><div class="button-row"><button class="btn primary" data-choice="catch">จับมอนสเตอร์ป่า</button><button class="btn red" data-choice="battle">ท้าสู้ · ชนะ +3</button></div>`;
   else if (state.step === 'capture') body = arrivalPending ? '<p class="waiting">กำลังเดินไปยังช่องโปเกมอน…</p>' : '<p class="waiting">การ์ดจับโปเกมอนเปิดอยู่กลางจอ</p>';
   else if (state.step === 'event_result') body = `<p>เหตุการณ์: ${esc(state.notice?.title || '')}</p><button class="btn primary block" data-act="ackEvent">รับทราบ · จบตา</button>`;
-else if (state.step === 'shop') body = `<p>เมืองฟื้น HP ให้ทั้งทีมแล้ว ซื้อบอลหรือการ์ดได้ตามต้องการ</p><div class="shop-grid">${Object.entries(BALLS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price ? 'disabled' : ''}>◉ ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><div class="mini-section">การ์ดไอเทม · ${me.items.length}/${MAX_ITEMS}</div><div class="shop-grid">${Object.entries(ITEMS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price || me.items.length >= MAX_ITEMS ? 'disabled' : ''}>${item.icon} ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><button class="btn primary block" data-act="leaveShop">ออกจากเมือง</button>`;
+else if (state.step === 'shop') body = '<p>ร้านค้าเปิดอยู่กลางจอ</p>';
   else if (state.step === 'quest_choice') {
     const quest = QUESTS[state.pending.questId];
     body = `<p>เควสใหม่: <b>${quest.name}</b><br>${quest.text}<br>รางวัล ${quest.coins} เหรียญ และ ${quest.reward === 'item' ? 'การ์ดไอเทม 1 ใบ' : 'โปเกมอน 1 ตัว'}</p>${me.quest ? '<p>มีเควสอยู่แล้ว เลือกเก็บอันเดิมหรือแทนที่</p>' : ''}<div class="button-row"><button class="btn primary" data-quest="accept">${me.quest ? 'รับแทนเควสเดิม' : 'รับเควส'}</button><button class="btn" data-quest="${me.quest ? 'keep' : 'skip'}">${me.quest ? 'เก็บเควสเดิม' : 'ไม่รับ'}</button></div>`;
@@ -254,18 +264,19 @@ function render() {
   const inBattle = state?.phase === 'playing' && ['battle_pick', 'battle_roll'].includes(state.step) && Boolean(state.battle);
   document.querySelector('.world-wrap').classList.toggle('in-battle', inBattle);
   $('battleOverlay').innerHTML = battleOverlayHtml();
-  board.setInteractive(Boolean(state && state.phase !== 'lobby' && state.step !== 'capture'));
+  board.setInteractive(Boolean(state && state.phase !== 'lobby' && !['capture', 'shop'].includes(state.step)));
   $('encounterOverlay').innerHTML = captureModalHtml();
   $('announcementOverlay').innerHTML = announcementHtml();
   $('playerHud').innerHTML = state?.phase === 'playing' || state?.phase === 'finished' ? playerHudHtml() : '';
   if (state?.phase === 'lobby') { $('overlay').innerHTML = lobbyHtml(); $('actionDock').innerHTML = ''; $('itemDock').innerHTML = ''; $('detailsDock').innerHTML = ''; }
   else if (!state) { $('overlay').innerHTML = landingHtml(); $('actionDock').innerHTML = ''; $('itemDock').innerHTML = ''; $('detailsDock').innerHTML = ''; }
   else {
-    $('overlay').innerHTML = '';
+    const shopping = state.step === 'shop' && state.players[state.turn]?.id === playerId;
+    $('overlay').innerHTML = shopping ? shopHtml() : '';
     const actor = state.players[state.turn];
     const battleParticipant = state.step.startsWith('battle') && state.battle?.sides.includes(playerId);
     const showAction = state.phase === 'finished' || (actor?.id === playerId && state.step !== 'capture') || battleParticipant;
-    $('actionDock').innerHTML = showAction ? actionHtml() : '';
+    $('actionDock').innerHTML = showAction && !shopping ? actionHtml() : '';
     $('itemDock').innerHTML = itemDockHtml();
     $('itemDock').className = `hand-size-${Math.max(1, Math.min(MAX_ITEMS, state.players.find(p => p.id === playerId)?.items.length || 0))}`;
     $('detailsDock').innerHTML = detailsDockHtml();
