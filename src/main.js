@@ -8,6 +8,7 @@ import './game-layout.css';
 import './battle.css';
 import './announcement.css';
 import './shop.css';
+import './roles.css';
 import { createBoard } from './board.js';
 import { BALLS, EVOLUTIONS, ITEMS, MAX_ITEMS, POKEMON, QUESTS, ROLES, SHOP_ITEMS, ZONES } from './game/data.js';
 import { badgeRequirement } from './game/engine.js';
@@ -16,6 +17,8 @@ import { POKEDEX, pokemonPortrait } from './game/artwork.js';
 
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const ROLE_SYMBOLS = { trainer: '◉', fisher: '♒', scientist: '✚', rocket: 'R', breeder: '✿', ranger: '✦', merchant: '◈', courier: '➜', collector: '◇', battler: '⚔' };
+const rolePreview = (id, role) => `<span class="role-portrait role-${id}" style="--role:${role.color}" aria-hidden="true"><span class="role-portrait-hair"></span><span class="role-portrait-face"></span><span class="role-portrait-body"></span><span class="role-portrait-hat"></span><span class="role-portrait-mark">${ROLE_SYMBOLS[id] || '◉'}</span></span>`;
 const board = createBoard($('world'));
 let socket, state, playerId, code, token, selectedSale = new Set(), toastTimer;
 const params = new URLSearchParams(location.search);
@@ -210,9 +213,12 @@ function actionHtml() {
   } else if (state.step === 'battle_roll' && battle?.sides.includes(playerId)) {
     body = `<p>${esc(battle.message || 'ทอยเต๋า สูงกว่าจะโจมตี')}</p>${battle.rolls[playerId] === undefined ? '<button class="btn primary block" data-act="battleRoll">🎲 ทอยเต๋าสู้</button>' : '<p class="waiting">รออีกฝ่ายทอยเต๋า…</p>'}`;
   } else if (!mine) body = `<p class="waiting">รอ ${esc(p.name)} เล่นอยู่…</p>`;
-  else if (state.step === 'roll') body = `<p>ถึงตาคุณแล้ว ทอยเต๋าเพื่อเดินบนกระดาน</p>${me.moveBonus ? `<p>โบนัสเดินจากไอเทม +${me.moveBonus} ช่อง</p>` : ''}${state.lastRoll ? `<div class="big-die">🎲 ${state.lastRoll.value}</div>` : ''}<button class="btn primary block" data-act="roll">ทอยเต๋า${me.moveBonus ? ` + ${me.moveBonus}` : ''}</button>`;
+  else if (state.step === 'roll') {
+    const bonus = (me.moveBonus || 0) + (me.role === 'courier' ? 1 : 0);
+    body = `<p>ถึงตาคุณแล้ว ทอยเต๋าเพื่อเดินบนกระดาน</p>${bonus ? `<p>โบนัสเดิน +${bonus} ช่อง</p>` : ''}${state.lastRoll ? `<div class="big-die">🎲 ${state.lastRoll.value}</div>` : ''}<button class="btn primary block" data-act="roll">ทอยเต๋า${bonus ? ` + ${bonus}` : ''}</button>`;
+  }
   else if (state.step === 'sale') {
-    const earned = me.pokemon.filter(mon => selectedSale.has(mon.uid)).reduce((sum, mon) => sum + POKEMON[mon.species].price + (POKEMON[mon.species].ability === 'sale' ? 1 : 0) + (me.role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0), 0);
+    const earned = me.pokemon.filter(mon => selectedSale.has(mon.uid)).reduce((sum, mon) => sum + POKEMON[mon.species].price + (POKEMON[mon.species].ability === 'sale' ? 1 : 0) + (me.role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0) + (me.role === 'merchant' ? 1 : 0), 0);
     body = `<p>ถึงจุดเริ่มต้น · รอบ ${me.laps}/3 เลือกตัวที่จะขาย ${me.laps < 3 ? '(ต้องเหลืออย่างน้อย 1 ตัว)' : '(ขายได้ทั้งหมด)'}</p><div class="monster-grid">${me.pokemon.map(mon => monCard(mon, true)).join('')}</div><div class="button-row"><button class="btn gold" data-act="sell">ขายที่เลือก +${earned} เหรียญ</button><button class="btn" data-ui="skip-sale">ไม่ขาย</button></div>`;
   } else if (state.step === 'wild_choice') body = `<p>มี ${esc(state.players.find(other => other.id === state.pending.opponentId)?.name)} อยู่บนช่องมอนสเตอร์ป่า คุณเลือกจับหรือท้าสู้ได้ อีกฝ่ายปฏิเสธการสู้ไม่ได้</p><div class="button-row"><button class="btn primary" data-choice="catch">จับมอนสเตอร์ป่า</button><button class="btn red" data-choice="battle">ท้าสู้ · ชนะ +3</button></div>`;
   else if (state.step === 'capture') body = arrivalPending ? '<p class="waiting">กำลังเดินไปยังช่องโปเกมอน…</p>' : '<p class="waiting">การ์ดจับโปเกมอนเปิดอยู่กลางจอ</p>';
@@ -254,7 +260,7 @@ function detailsDockHtml() {
 }
 function lobbyHtml() {
   const me = state.players.find(p => p.id === playerId);
-  return `<div class="modal"><div class="eyebrow">ROOM ${code} · ${state.players.length}/4 คน</div><h1>เตรียมออกเดินทาง</h1><p>ส่งลิงก์นี้ให้เพื่อนเปิดในเบราว์เซอร์ แล้วรอให้ทุกคนเข้าห้องก่อนเริ่มเกม</p><div class="button-row"><input class="field" style="flex:1;min-width:0" readonly aria-label="ลิงก์ชวนเพื่อน" value="${esc(inviteUrl())}"><button class="btn gold" data-ui="copy-link">คัดลอก URL</button></div><div class="card">${state.players.map(p => `<div class="lobby-player"><b>${esc(p.name)} ${p.id === state.hostId ? '👑' : ''}</b><span>${esc(ROLES[p.role].name)}</span></div>`).join('')}</div><h2>เลือกอาชีพของคุณ</h2><div class="shop-grid">${Object.entries(ROLES).map(([id, role]) => `<button class="btn shop-entry ${me?.role === id ? 'primary' : ''}" data-role="${id}"><b>${role.name}</b><br>${POKEMON[role.starter].name}<br><small>${role.ability}</small></button>`).join('')}</div><div class="rule-note">เริ่มเกมเมื่อพร้อม · ที่ว่างจะเติมบอทให้ครบ 4 คน</div>${state.hostId === playerId ? '<button class="btn gold block" data-ui="start">เริ่มเกม</button>' : '<p class="waiting">รอหัวหน้าห้องเริ่มเกม…</p>'}</div>`;
+  return `<div class="modal lobby-modal"><div class="eyebrow">ROOM ${code} · ${state.players.length}/4 คน</div><h1>เตรียมออกเดินทาง</h1><p>ส่งลิงก์นี้ให้เพื่อนเปิดในเบราว์เซอร์ แล้วรอให้ทุกคนเข้าห้องก่อนเริ่มเกม</p><div class="button-row"><input class="field" style="flex:1;min-width:0" readonly aria-label="ลิงก์ชวนเพื่อน" value="${esc(inviteUrl())}"><button class="btn gold" data-ui="copy-link">คัดลอก URL</button></div><div class="card">${state.players.map(p => `<div class="lobby-player"><b>${esc(p.name)} ${p.id === state.hostId ? '👑' : ''}</b><span>${esc(ROLES[p.role].name)}</span></div>`).join('')}</div><h2>เลือกอาชีพของคุณ</h2><div class="role-grid">${Object.entries(ROLES).map(([id, role]) => `<button class="role-choice ${me?.role === id ? 'selected' : ''}" data-role="${id}" style="--role:${role.color}" aria-pressed="${me?.role === id}">${rolePreview(id, role)}<span class="role-choice-copy"><b>${role.name}</b><small>คู่หูเริ่มต้น: ${POKEMON[role.starter].name}</small><span>${role.ability}</span></span></button>`).join('')}</div><div class="rule-note">เริ่มเกมเมื่อพร้อม · ที่ว่างจะเติมบอทให้ครบ 4 คน</div>${state.hostId === playerId ? '<button class="btn gold block" data-ui="start">เริ่มเกม</button>' : '<p class="waiting">รอหัวหน้าห้องเริ่มเกม…</p>'}</div>`;
 }
 function landingHtml() {
   const invited = /^[0-9A-F]{6}$/i.test(params.get('room') || '') ? params.get('room').toUpperCase() : null;

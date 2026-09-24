@@ -22,6 +22,12 @@ export const ROLES = {
   fisher: { name: 'นักตกปลา', color: '#51ace8', starter: 'magikarp', ability: 'ขายโปเกมอนที่จับในโซนฟ้า +2 เหรียญ', effect: 'blue_sale' },
   scientist: { name: 'นักวิทยาศาสตร์', color: '#a889e3', starter: 'squirtle', ability: 'โปเกบอลน้ำเงินและดำเพิ่มโบนัสอีก +1', effect: 'ball' },
   rocket: { name: 'แก๊งร็อกเก็ต', color: '#373947', starter: 'rattata', ability: 'ชนะผู้เล่นอื่นได้เงินเพิ่มอีก 1 เหรียญ', effect: 'battle_coin' },
+  breeder: { name: 'นักเพาะพันธุ์', color: '#75b981', starter: 'bulbasaur', ability: 'เริ่มตาฟื้น HP ทั้งทีมตัวละ 1', effect: 'turn_heal' },
+  ranger: { name: 'เรนเจอร์', color: '#587f52', starter: 'sandshrew', ability: 'จับโปเกมอนโซนแดงได้โบนัส +2', effect: 'red_catch' },
+  merchant: { name: 'พ่อค้า', color: '#d39b4b', starter: 'meowth', ability: 'ขายโปเกมอนได้เพิ่มตัวละ 1 เหรียญ', effect: 'sale_bonus' },
+  courier: { name: 'นักส่งของ', color: '#ee9254', starter: 'pidgey', ability: 'ทอยเดินได้โบนัส +1 ช่องทุกตา', effect: 'walk_bonus' },
+  collector: { name: 'นักสะสม', color: '#9b81cb', starter: 'eevee', ability: 'ผ่านจุดเริ่มต้นรับบอลน้ำเงินเพิ่ม 1 ลูก', effect: 'lap_ball' },
+  battler: { name: 'นักสู้', color: '#cf6471', starter: 'machop', ability: 'โจมตีครั้งแรกในแต่ละศึกแรงขึ้น 1', effect: 'first_strike' },
 };
 
 const p = (name, zone, hp, power, price, color, shape, ability, abilityText) => ({

@@ -67,6 +67,10 @@ function endTurn(game, rng) {
     if (!current(game).done) break;
   } while (true);
   current(game).moveBonus = 0;
+  if (current(game).role === 'breeder') {
+    current(game).pokemon.forEach(mon => { mon.hp = Math.min(POKEMON[mon.species].hp, mon.hp + 1); });
+    log(game, `${current(game).name} ฟื้น HP ทั้งทีมตัวละ 1 จากอาชีพนักเพาะพันธุ์`);
+  }
   game.pending = null; game.battle = null; game.step = 'roll';
   drawTurnItem(game, rng);
 }
@@ -262,6 +266,7 @@ function resolveBattleRolls(game, rng) {
   const firstAttack = !b.effects[key];
   b.effects[key] = true;
   let damage = battlePower(attacker, defender, firstAttack) + (b.effects[`${attackerSide}:power`] || 0);
+  if (firstAttack && attackerSide !== 'wild' && player(game, attackerSide)?.role === 'battler') damage += 1;
   b.effects[`${attackerSide}:power`] = 0;
   if (!b.effects[`${defenderSide}:dodge`] && POKEMON[defender.species].ability === 'dodge') {
     damage -= 1; b.effects[`${defenderSide}:dodge`] = true;
@@ -290,12 +295,13 @@ function movePlayer(game, p, value, rng, source = 'die', rolled = value) {
   if (from + value >= TILES.length) {
     p.position = 0; p.laps++;
     p.balls.basic += 3;
+    if (p.role === 'collector') p.balls.great++;
     game.lastRoll.to = 0;
     game.pending = { kind: 'sale' }; game.step = 'sale';
-    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสไอเทม ${value - rolled}` : ''} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก`);
+    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสเดิน ${value - rolled}` : ''} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก${p.role === 'collector' ? ' บอลน้ำเงิน 1 ลูก' : ''}`);
   } else {
     p.position = from + value;
-    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสไอเทม ${value - rolled}` : ''} เดิน ${value} ช่อง ไปช่อง ${p.position + 1}`);
+    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสเดิน ${value - rolled}` : ''} เดิน ${value} ช่อง ไปช่อง ${p.position + 1}`);
     resolveTile(game, rng);
   }
 }
@@ -309,7 +315,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
 
   if (action.type === 'roll') {
     if (game.step !== 'roll') return fail('ตอนนี้ยังทอยไม่ได้');
-    const rolled = die(rng), bonus = p.moveBonus || 0;
+    const rolled = die(rng), bonus = (p.moveBonus || 0) + (p.role === 'courier' ? 1 : 0);
     p.moveBonus = 0;
     movePlayer(game, p, rolled + bonus, rng, 'die', rolled);
   } else if (action.type === 'chooseQuest') {
@@ -342,7 +348,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     for (const uid of ids) {
       const mon = p.pokemon.find(item => item.uid === uid);
       const species = POKEMON[mon.species];
-      gained += species.price + (species.ability === 'sale' ? 1 : 0) + (p.role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0);
+      gained += species.price + (species.ability === 'sale' ? 1 : 0) + (p.role === 'fisher' && mon.caughtZone === 'blue' ? 2 : 0) + (p.role === 'merchant' ? 1 : 0);
     }
     p.pokemon = p.pokemon.filter(mon => !ids.includes(mon.uid));
     p.coins += gained;
@@ -371,7 +377,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     p.balls[action.ball]--;
     const value = die(rng);
     const { species, zone, legendary } = game.pending;
-    const roleBonus = p.role === 'trainer' && !legendary ? 1 : 0;
+    const roleBonus = !legendary ? (p.role === 'trainer' ? 1 : p.role === 'ranger' && zone === 'red' ? 2 : 0) : 0;
     const ballBonus = p.role === 'scientist' && action.ball !== 'basic' ? 1 : 0;
     const threshold = legendary ? 6 : ZONES[zone].threshold;
     const total = legendary ? value : value + ball.bonus + roleBonus + ballBonus;

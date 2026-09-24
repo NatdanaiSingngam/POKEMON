@@ -62,9 +62,11 @@ function broadcast(room) {
   }
 }
 function addParticipant(room, name, bot = false) {
+  const availableRoles = Object.keys(ROLES).filter(role => !room.participants.some(participant => participant.role === role));
+  const role = room.participants.length === 0 ? 'trainer' : availableRoles[Math.floor(Math.random() * availableRoles.length)] || 'trainer';
   const p = {
     id: randomUUID(), token: randomBytes(24).toString('hex'), name: cleanName(name),
-    role: Object.keys(ROLES)[room.participants.length % 4], bot, connected: !bot, ws: null,
+    role, bot, connected: !bot, ws: null,
   };
   room.participants.push(p);
   return p;
