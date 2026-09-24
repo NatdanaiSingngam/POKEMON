@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { ROLES, TILES } from './game/data.js';
 import { POKEDEX } from './game/artwork.js';
 
@@ -488,6 +489,20 @@ export function createBoard(mount) {
   function clearDie() { die.visible = dieShadow.visible = false; dieMotion = null; }
 
   const avatarMap = new Map();
+  let trainerTemplate = null;
+  function attachTrainerAsset(avatar) {
+    if (!trainerTemplate || avatar.userData.role !== 'trainer' || avatar.userData.asset) return;
+    avatar.traverse(child => { if (child !== avatar) child.geometry?.dispose(); });
+    avatar.clear();
+    const model = trainerTemplate.clone(true);
+    model.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+    avatar.add(model);
+    avatar.userData.asset = true;
+  }
+  new GLTFLoader().load('/models/trainer-voxel.glb', gltf => {
+    trainerTemplate = gltf.scene;
+    for (const avatar of avatarMap.values()) attachTrainerAsset(avatar);
+  }, undefined, error => console.warn('Trainer model unavailable; using built-in token.', error));
   const highlight = new THREE.Mesh(new THREE.RingGeometry(.58, .67, 32), new THREE.MeshBasicMaterial({ color: '#ffe07b', side: THREE.DoubleSide }));
   highlight.rotation.x = -Math.PI / 2; highlight.position.y = .315; scene.add(highlight);
   const motionAllowed = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -526,10 +541,12 @@ export function createBoard(mount) {
       live.add(p.id);
       let avatar = avatarMap.get(p.id);
       if (avatar && avatar.userData.role !== p.role) {
-        scene.remove(avatar); avatar.traverse(child => child.geometry?.dispose()); avatarMap.delete(p.id); avatar = null;
+        scene.remove(avatar);
+        if (!avatar.userData.asset) avatar.traverse(child => child.geometry?.dispose());
+        avatarMap.delete(p.id); avatar = null;
       }
       if (!avatar) {
-        avatar = voxelAvatar(p.role); scene.add(avatar); avatarMap.set(p.id, avatar);
+        avatar = voxelAvatar(p.role); attachTrainerAsset(avatar); scene.add(avatar); avatarMap.set(p.id, avatar);
         avatar.userData.position = p.position || 0;
         avatar.userData.route = [];
         avatar.userData.elapsed = 0;

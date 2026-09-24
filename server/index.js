@@ -16,7 +16,7 @@ const vite = dev ? await (await import('vite')).createServer({
   root, server: { middlewareMode: true }, appType: 'spa',
 }) : null;
 
-const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.glb': 'model/gltf-binary', '.ico': 'image/x-icon' };
 const server = createServer(async (req, res) => {
   if (new URL(req.url, `http://${req.headers.host || 'localhost'}`).pathname === '/health') {
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
