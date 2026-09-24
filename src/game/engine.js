@@ -1,4 +1,4 @@
-import { BALLS, DRAW_ITEMS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, TILES, ZONES } from './data.js';
+import { BALLS, DRAW_ITEMS, EVENTS, EVOLUTIONS, ITEMS, LAPS_TO_WIN, MAX_ITEMS, MAX_POKEMON, POKEMON, POOLS, QUESTS, ROLES, SHOP_ITEMS, TILES, ZONES } from './data.js';
 
 const die = rng => Math.floor(rng() * 6) + 1;
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];
@@ -13,7 +13,7 @@ export function createGame(participants, rng = Math.random) {
       connected: source.connected !== false, role, position: 0, laps: 0, done: false,
       coins: 10, balls: { basic: 5, great: 0, ultra: 0 },
       pokemon: [{ uid: `starter-${index}`, species, hp: POKEMON[species].hp, caughtZone: 'starter' }],
-      items: [], usedOutside: false, badges: [], quest: null, caveTurns: 0,
+      items: [], moveBonus: 0, badges: [], quest: null, caveTurns: 0,
     };
   });
   const game = {
@@ -64,7 +64,7 @@ function endTurn(game, rng) {
     }
     if (!current(game).done) break;
   } while (true);
-  current(game).usedOutside = false;
+  current(game).moveBonus = 0;
   game.pending = null; game.battle = null; game.step = 'roll';
   drawTurnItem(game, rng);
 }
@@ -265,19 +265,18 @@ function legalActor(game, actorId, action) {
   if (current(game).id !== actorId) return 'ยังไม่ถึงตาของคุณ';
   return null;
 }
-function movePlayer(game, p, value, rng, source = 'die') {
+function movePlayer(game, p, value, rng, source = 'die', rolled = value) {
   const from = p.position;
-  const movedByItem = source !== 'die';
-  game.lastRoll = { playerId: p.id, value, from, to: (from + value) % TILES.length, source };
+  game.lastRoll = { playerId: p.id, value, rolled, bonus: value - rolled, from, to: (from + value) % TILES.length, source };
   if (from + value >= TILES.length) {
     p.position = 0; p.laps++;
     p.balls.basic += 3;
     game.lastRoll.to = 0;
     game.pending = { kind: 'sale' }; game.step = 'sale';
-    log(game, `${p.name} ${movedByItem ? `ใช้ ${ITEMS[source].name} เดิน ${value} ช่อง` : `ทอยได้ ${value}`} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก`);
+    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสไอเทม ${value - rolled}` : ''} หยุดที่จุดเริ่มต้น (รอบ ${p.laps}/3) และรับบอลแดง 3 ลูก`);
   } else {
     p.position = from + value;
-    log(game, `${p.name} ${movedByItem ? `ใช้ ${ITEMS[source].name} เดิน ${value} ช่อง` : `ทอยได้ ${value}`} ไปช่อง ${p.position + 1}`);
+    log(game, `${p.name} ทอยได้ ${rolled}${value > rolled ? ` + โบนัสไอเทม ${value - rolled}` : ''} เดิน ${value} ช่อง ไปช่อง ${p.position + 1}`);
     resolveTile(game, rng);
   }
 }
@@ -291,7 +290,9 @@ export function applyAction(game, actorId, action, rng = Math.random) {
 
   if (action.type === 'roll') {
     if (game.step !== 'roll') return fail('ตอนนี้ยังทอยไม่ได้');
-    movePlayer(game, p, die(rng), rng);
+    const rolled = die(rng), bonus = p.moveBonus || 0;
+    p.moveBonus = 0;
+    movePlayer(game, p, rolled + bonus, rng, 'die', rolled);
   } else if (action.type === 'chooseQuest') {
     if (game.step !== 'quest_choice') return fail('ตอนนี้รับเควสไม่ได้');
     if (!['accept', 'keep', 'skip'].includes(action.choice)) return fail('ตัวเลือกเควสไม่ถูกต้อง');
@@ -389,7 +390,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       if (p.coins < entry.price) return fail('เงินไม่พอ');
       p.coins -= entry.price; p.balls[action.id]++;
       log(game, `${p.name} ซื้อโปเกบอล ราคา ${entry.price} เหรียญ`);
-    } else if (ITEMS[action.id]) {
+    } else if (SHOP_ITEMS.includes(action.id)) {
       const entry = ITEMS[action.id];
       if (p.items.length >= MAX_ITEMS) return fail(`ไอเทมเต็ม ${MAX_ITEMS} ใบ`);
       if (p.coins < entry.price) return fail('เงินไม่พอ');
@@ -413,7 +414,7 @@ export function applyAction(game, actorId, action, rng = Math.random) {
   } else if (action.type === 'useItem') {
     const idx = Number(action.index), itemId = p?.items[idx], item = ITEMS[itemId];
     if (!Number.isInteger(idx) || !item) return fail('ไม่มีไอเทมใบนี้');
-    const movement = { repel: 2, super_repel: 4, bicycle: 6 }[itemId];
+    const movement = item.move || 0;
     if (game.step === 'battle_roll') {
       if (item.timing !== 'battle') return fail('ไอเทมนี้ใช้ได้เฉพาะนอกการต่อสู้');
       if (game.battle.usedItem.includes(actorId)) return fail('ใช้ไอเทมในศึกนี้แล้ว');
@@ -429,7 +430,6 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     } else {
       if (!['roll', 'shop'].includes(game.step)) return fail('ตอนนี้ใช้ไอเทมนอกการต่อสู้ไม่ได้');
       if (item.timing !== 'outside') return fail('ไอเทมนี้ใช้ได้เฉพาะระหว่างต่อสู้');
-      if (p.usedOutside) return fail('ใช้ไอเทมนอกการต่อสู้ในเทิร์นนี้แล้ว');
       if (movement && game.step !== 'roll') return fail('ไอเทมเดินใช้ได้ก่อนทอยเท่านั้น');
       const target = item.target === 'other' ? player(game, action.targetId) : p;
       if (!target || (item.target === 'other' && (target.id === p.id || target.done))) return fail('เป้าหมายไม่ถูกต้อง');
@@ -441,11 +441,17 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       if (candyTarget) { candyTarget.species = EVOLUTIONS[candyTarget.species]; candyTarget.hp = POKEMON[candyTarget.species].hp; }
       if (itemId === 'ball_box') p.balls.basic += 3;
       if (itemId === 'tax_notice') target.coins = Math.max(0, target.coins - 2);
-      p.usedOutside = true;
+      if (item.effect === 'coins') p.coins += item.amount;
+      if (item.effect === 'balls') p.balls.basic += item.amount;
+      if (item.effect === 'greatBall') p.balls.great += item.amount;
+      if (item.effect === 'ultraBall') p.balls.ultra += item.amount;
+      if (item.effect === 'heal') p.pokemon.forEach(mon => { mon.hp = Math.min(POKEMON[mon.species].hp, mon.hp + item.amount); });
+      if (item.effect === 'fine') target.coins = Math.max(0, target.coins - item.amount);
+      if (item.effect === 'steal') { const amount = Math.min(item.amount, target.coins); target.coins -= amount; p.coins += amount; }
+      if (movement) p.moveBonus = (p.moveBonus || 0) + movement;
     }
     p.items.splice(idx, 1);
     log(game, `${p.name} ใช้ ${item.name}`);
-    if (movement) movePlayer(game, p, movement, rng, itemId);
   } else return fail('ไม่รู้จักคำสั่งนี้');
   return { ok: true };
 }

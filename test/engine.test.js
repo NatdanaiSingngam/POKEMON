@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, applyAction, actionsForBot } from '../src/game/engine.js';
-import { DRAW_ITEMS, ITEMS, POKEMON, POOLS, ROLES, SHOP_ITEMS, TILES } from '../src/game/data.js';
+import { DRAW_ITEMS, EVENTS, ITEMS, POKEMON, POOLS, QUESTS, ROLES, SHOP_ITEMS, TILES } from '../src/game/data.js';
 
 const people = [0,1,2,3].map(i => ({ id: `p${i}`, name: `Player ${i}`, role: ['trainer','fisher','scientist','rocket'][i] }));
 const fixed = value => () => (value - 1) / 6 + 0.001;
@@ -17,6 +17,19 @@ test('shop items are excluded from every possible turn draw', () => {
     const game = createGame(people, () => (index + 0.5) / DRAW_ITEMS.length);
     assert.equal(game.players[0].items[0], DRAW_ITEMS[index]);
   }
+});
+
+test('new draw cards, quests and events have playable definitions', () => {
+  assert.ok(DRAW_ITEMS.length >= 28);
+  assert.ok(Object.keys(QUESTS).length >= 9);
+  assert.ok(EVENTS.length >= 19);
+  for (const id of DRAW_ITEMS) {
+    const item = ITEMS[id];
+    assert.ok(item.name && item.text && item.icon, id);
+    if (!item.move && !item.effect) assert.ok(['lucky_coin', 'pickpocket', 'ball_box', 'tax_notice', 'power_up', 'smoke', 'shield'].includes(id), id);
+  }
+  for (const quest of Object.values(QUESTS)) assert.ok(['catch', 'city', 'battle'].includes(quest.event) && quest.target > 0);
+  for (const event of EVENTS) assert.ok(['coins', 'balls', 'heal', 'item', 'legendary'].includes(event.kind));
 });
 
 test('crossing Start stops movement, sells with one left, completes after third lap', () => {
@@ -127,24 +140,48 @@ test('shop sells the pictured balls and movement cards at their displayed prices
   run(game, p.id, { type: 'buy', id: 'bicycle' });
   assert.equal(p.coins, 3);
   assert.deepEqual(p.items, ['bicycle']);
+  assert.equal(applyAction(game, p.id, { type: 'buy', id: 'tip_jar' }).ok, false, 'draw cards cannot be bought in the shop');
   assert.equal(applyAction(game, p.id, { type: 'useItem', index: 0 }).ok, false, 'movement item is for before rolling');
 });
 
-test('repel and bicycle replace the roll and start still stops movement', () => {
+test('movement items stack with the die and start still stops movement', () => {
   const repelGame = createGame(people), repelPlayer = repelGame.players[0];
-  repelPlayer.items = ['repel'];
+  repelPlayer.items = ['repel', 'bus_ticket'];
   run(repelGame, repelPlayer.id, { type: 'useItem', index: 0 });
-  assert.equal(repelPlayer.position, 2);
-  assert.equal(repelGame.step, 'quest_choice');
-  assert.equal(repelPlayer.items.length, 0);
+  run(repelGame, repelPlayer.id, { type: 'useItem', index: 0 });
+  assert.equal(repelPlayer.position, 0);
+  assert.equal(repelPlayer.moveBonus, 3);
+  run(repelGame, repelPlayer.id, { type: 'roll' }, 2);
+  assert.equal(repelPlayer.position, 5);
+  assert.equal(repelGame.lastRoll.rolled, 2);
+  assert.equal(repelGame.lastRoll.bonus, 3);
+  assert.equal(repelGame.step, 'shop');
 
   const bikeGame = createGame(people), bikePlayer = bikeGame.players[0];
   bikePlayer.items = ['bicycle']; bikePlayer.position = 38;
   run(bikeGame, bikePlayer.id, { type: 'useItem', index: 0 });
+  assert.equal(bikePlayer.position, 38);
+  run(bikeGame, bikePlayer.id, { type: 'roll' }, 1);
   assert.equal(bikePlayer.position, 0);
   assert.equal(bikePlayer.laps, 1);
   assert.equal(bikeGame.step, 'sale');
   assert.equal(bikePlayer.balls.basic, 8);
+});
+
+test('outside items can be used repeatedly in one turn and new effects apply', () => {
+  const game = createGame(people), p = game.players[0];
+  p.items = ['tip_jar', 'red_ball_pair', 'team_snack', 'snack_tax'];
+  p.pokemon[0].hp = 1;
+  run(game, p.id, { type: 'useItem', index: 0 });
+  run(game, p.id, { type: 'useItem', index: 0 });
+  run(game, p.id, { type: 'useItem', index: 0 });
+  run(game, p.id, { type: 'useItem', index: 0, targetId: 'p1' });
+  assert.equal(p.coins, 13);
+  assert.equal(game.players[1].coins, 9);
+  assert.equal(p.balls.basic, 7);
+  assert.equal(p.pokemon[0].hp, 3);
+  assert.equal(p.items.length, 0);
+  assert.equal(game.step, 'roll');
 });
 
 test('rare candy evolves a chosen team member and restores HP', () => {
