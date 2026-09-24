@@ -14,6 +14,7 @@ export function createGame(participants, rng = Math.random) {
       coins: 10, balls: { basic: 5, great: 0, ultra: 0 },
       pokemon: [{ uid: `starter-${index}`, species, hp: POKEMON[species].hp, caughtZone: 'starter' }],
       items: [], moveBonus: 0, badges: [], quest: null, caveTurns: 0,
+      stats: { catches: 0, legendaryCatches: 0, quests: 0, pvpWins: 0, villainWins: 0 },
       seenPokemon: [species], recentPokemon: [],
     };
   });
@@ -21,7 +22,7 @@ export function createGame(participants, rng = Math.random) {
     phase: 'playing', players, turn: 0, step: 'roll', pending: null, battle: null,
     serial: 1, lastRoll: null, lastCatch: null, lastBattle: null, notice: null, result: null,
     encounterHistory: [], announcements: [],
-    log: ['เริ่มเกมแล้ว — วนกระดานคนละ 3 รอบ แล้วนับเงิน'],
+    log: ['เริ่มเกมแล้ว — วนกระดานคนละ 3 รอบ แล้วนับคะแนนรวม'],
     rngSeed: Math.floor(rng() * 1000000),
   };
   drawTurnItem(game, rng);
@@ -38,6 +39,19 @@ function announce(game, kind, title, text, extra = {}) {
 }
 function current(game) { return game.players[game.turn]; }
 function player(game, id) { return game.players.find(p => p.id === id); }
+export function scoreBreakdown(p) {
+  const stats = p.stats || {};
+  const parts = {
+    coins: p.coins,
+    badges: (p.badges?.length || 0) * 8,
+    catches: (stats.catches || 0) * 2,
+    legendary: (stats.legendaryCatches || 0) * 6,
+    quests: (stats.quests || 0) * 4,
+    pvp: (stats.pvpWins || 0) * 3,
+    villains: (stats.villainWins || 0) * 2,
+  };
+  return { ...parts, total: Object.values(parts).reduce((sum, value) => sum + value, 0) };
+}
 export function saleValue(mon, role) {
   const species = POKEMON[mon.species];
   if (!species) return 0;
@@ -60,10 +74,11 @@ function drawTurnItem(game, rng) {
 }
 function endTurn(game, rng) {
   if (game.players.every(p => p.done)) {
-    const best = Math.max(...game.players.map(p => p.coins));
+    const scores = Object.fromEntries(game.players.map(p => [p.id, scoreBreakdown(p)]));
+    const best = Math.max(...Object.values(scores).map(score => score.total));
     game.phase = 'finished'; game.step = 'finished';
-    game.result = { coins: best, winners: game.players.filter(p => p.coins === best).map(p => p.id) };
-    log(game, `จบเกม! เงินสูงสุด ${best} เหรียญ`);
+    game.result = { points: best, scores, winners: game.players.filter(p => scores[p.id].total === best).map(p => p.id) };
+    log(game, `จบเกม! คะแนนสูงสุด ${best} แต้ม`);
     return;
   }
   do {
@@ -110,6 +125,7 @@ function advanceQuest(game, p, event, rng) {
   if (p.quest.progress < quest.target) { log(game, `${p.name}: ${quest.name} ${p.quest.progress}/${quest.target}`); return; }
   p.quest = null;
   p.coins += quest.coins;
+  p.stats.quests++;
   if (quest.reward === 'item') {
     const itemId = pick(DRAW_ITEMS, rng);
     if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); announce(game, 'quest', `${p.name} ทำเควสสำเร็จ!`, `${quest.name} · รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
@@ -133,7 +149,7 @@ function offerNpcBattle(game, rng, kind) {
 function offerWild(game, rng) {
   const p = current(game), zone = TILES[p.position].zone;
   const species = pickPokemonForPlayer(game, p, POOLS[zone], rng);
-  game.pending = { kind: 'catch', species, zone, legendary: false };
+  game.pending = { kind: 'catch', species, zone, legendary: false, attempts: 0 };
   game.step = 'capture';
   log(game, `${p.name} พบ ${POKEMON[species].name} ใน${ZONES[zone].name}`);
 }
@@ -232,6 +248,7 @@ function finishBattle(game, winnerSide, loserSide, rng) {
   if (b.kind === 'pvp') {
     const prize = 3 + (winner?.role === 'rocket' ? 1 : 0);
     winner.coins += prize;
+    winner.stats.pvpWins++;
     log(game, `${winner.name} ชนะ ${loser.name} และรับ ${prize} เหรียญ`);
     advanceQuest(game, winner, 'battle', rng);
     endTurn(game, rng);
@@ -246,6 +263,7 @@ function finishBattle(game, winnerSide, loserSide, rng) {
     }
     if (b.kind === 'villain') {
       winner.coins += 3;
+      winner.stats.villainWins++;
       advanceQuest(game, winner, 'battle', rng);
       const eligible = winner.pokemon.filter(mon => EVOLUTIONS[mon.species]);
       log(game, `${winner.name} ชนะวายร้าย! ได้ 3 เหรียญ และสิทธิ์พัฒนาร่าง`);
@@ -256,7 +274,7 @@ function finishBattle(game, winnerSide, loserSide, rng) {
     }
     const species = b.picks.wild.species;
     advanceQuest(game, winner, 'battle', rng);
-    game.pending = { kind: 'catch', species, zone: 'legendary', legendary: true };
+    game.pending = { kind: 'catch', species, zone: 'legendary', legendary: true, attempts: 0 };
     game.battle = null; game.step = 'capture';
     log(game, `${winner.name} ชนะ ${POKEMON[species].name}! ทอยได้ 6 จึงจับสำเร็จ`);
   }
@@ -387,10 +405,12 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     } else return fail('ตัวเลือกไม่ถูกต้อง');
   } else if (action.type === 'throwBall') {
     if (game.step !== 'capture') return fail('ตอนนี้จับไม่ได้');
+    if ((game.pending.attempts || 0) >= 3) return fail('โปเกมอนหนีไปแล้ว');
     const ball = BALLS[action.ball];
     if (!ball || p.balls[action.ball] < 1) return fail('ไม่มีโปเกบอลชนิดนี้');
     if (p.pokemon.length >= MAX_POKEMON) return fail('ทีมเต็ม 6 ตัวแล้ว');
     p.balls[action.ball]--;
+    game.pending.attempts = (game.pending.attempts || 0) + 1;
     const value = die(rng);
     const { species, zone, legendary } = game.pending;
     const roleBonus = !legendary ? (p.role === 'trainer' ? 1 : p.role === 'ranger' && zone === 'red' ? 2 : 0) : 0;
@@ -398,11 +418,17 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     const threshold = legendary ? 6 : ZONES[zone].threshold;
     const total = legendary ? value : value + ball.bonus + roleBonus + ballBonus;
     const success = legendary ? value === 6 : total >= threshold;
-    if (success) { p.pokemon.push(makePokemon(game, species, zone)); advanceQuest(game, p, 'catch', rng); }
-    game.lastCatch = { playerId: p.id, species, value, total, threshold, success, ball: action.ball };
-    announce(game, 'catch', success ? `${p.name} จับสำเร็จ!` : `${p.name} จับไม่สำเร็จ`, `${POKEMON[species].name} · ทอยได้ ${value}${legendary ? '' : ` รวมโบนัส ${total}`} · ต้องได้ ${threshold}${success ? ' · เข้าทีมแล้ว' : ' · ลองใหม่ได้'}`, { species, success, playerId: p.id });
-    log(game, `${p.name} ทอยจับ ${value}${legendary ? '' : ` (+${total - value})`} — ${success ? `จับ ${POKEMON[species].name} สำเร็จ!` : `จับ ${POKEMON[species].name} ไม่สำเร็จ ยังลองใหม่ได้`}`);
-    if (success) endTurn(game, rng);
+    if (success) {
+      p.pokemon.push(makePokemon(game, species, zone));
+      p.stats.catches++;
+      if (legendary) p.stats.legendaryCatches++;
+      advanceQuest(game, p, 'catch', rng);
+    }
+    const escaped = !success && game.pending.attempts >= 3;
+    game.lastCatch = { playerId: p.id, species, value, total, threshold, success, escaped, attempt: game.pending.attempts, ball: action.ball };
+    announce(game, 'catch', success ? `${p.name} จับสำเร็จ!` : escaped ? `${POKEMON[species].name} หนีไปแล้ว!` : `${p.name} จับไม่สำเร็จ`, `${POKEMON[species].name} · ทอยได้ ${value}${legendary ? '' : ` รวมโบนัส ${total}`} · ต้องได้ ${threshold} · ครั้งที่ ${game.pending.attempts}/3${success ? ' · เข้าทีมแล้ว' : escaped ? ' · หมดโอกาสจับ' : ' · ลองใหม่ได้'}`, { species, success, escaped, playerId: p.id });
+    log(game, `${p.name} ทอยจับ ${value}${legendary ? '' : ` (+${total - value})`} — ${success ? `จับ ${POKEMON[species].name} สำเร็จ!` : escaped ? `${POKEMON[species].name} หนีไปแล้ว` : `จับ ${POKEMON[species].name} ไม่สำเร็จ ลองอีกได้ ${3 - game.pending.attempts} ครั้ง`}`);
+    if (success || escaped) endTurn(game, rng);
   } else if (action.type === 'skipCapture') {
     if (game.step !== 'capture') return fail('ตอนนี้ข้ามไม่ได้');
     log(game, `${p.name} ไม่จับโปเกมอน`); endTurn(game, rng);

@@ -9,7 +9,8 @@
 .hud-info small { display: block; font-size: 9px; color: #5c7375; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hud-coins { color: #af741c; white-space: nowrap; font-size: 13px; font-weight: 700; }
 .results-list { margin: 10px 0 14px; border: 2px solid #b5c8b7; border-radius: 8px; overflow: hidden; }
-.result-row { display: flex; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid #dce5d8; font-size: 13px; }
+.result-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 7px 10px; border-bottom: 1px solid #dce5d8; font-size: 13px; }
+.result-row small { grid-column: 1 / -1; color: #536d6d; line-height: 1.35; }
 .result-row:last-child { border: 0; }.result-row.winner { background: #fff0b8; }
 .sidebar-players { display: none; }
 .scene-message { top: 13px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 310px; white-space: normal; }
