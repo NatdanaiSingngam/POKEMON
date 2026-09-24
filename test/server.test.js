@@ -44,8 +44,12 @@ test('online room create, join, start, turn action and reconnect', async () => {
     await until(() => b.messages.find(m => m.type === 'joined'));
     a.ws.send(JSON.stringify({ type: 'start' }));
     const started = await until(() => a.messages.find(m => m.type === 'state' && m.state.phase === 'playing'));
+    const otherView = await until(() => b.messages.find(m => m.type === 'state' && m.state.phase === 'playing'));
     assert.equal(started.state.players.length, 4);
     assert.equal(started.state.players.filter(p => p.bot).length, 2);
+    assert.equal(started.state.players.find(p => p.id === joined.playerId).items.length, 1);
+    assert.deepEqual(otherView.state.players.find(p => p.id === joined.playerId).items, []);
+    assert.equal(otherView.state.players.find(p => p.id === joined.playerId).itemCount, 1);
     a.ws.send(JSON.stringify({ type: 'action', action: { type: 'roll' } }));
     await until(() => a.messages.find(m => m.type === 'state' && m.state.lastRoll));
     a.ws.close(); await new Promise(resolve => a.ws.once('close', resolve));

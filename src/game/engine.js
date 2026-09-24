@@ -13,12 +13,12 @@ export function createGame(participants, rng = Math.random) {
       connected: source.connected !== false, role, position: 0, laps: 0, done: false,
       coins: 10, balls: { basic: 5, great: 0, ultra: 0 },
       pokemon: [{ uid: `starter-${index}`, species, hp: POKEMON[species].hp, caughtZone: 'starter' }],
-      items: [], usedOutside: false, badges: [], quest: null,
+      items: [], usedOutside: false, badges: [], quest: null, caveTurns: 0,
     };
   });
   const game = {
     phase: 'playing', players, turn: 0, step: 'roll', pending: null, battle: null,
-    serial: 1, lastRoll: null, lastCatch: null, result: null,
+    serial: 1, lastRoll: null, lastCatch: null, lastBattle: null, notice: null, result: null,
     log: ['เริ่มเกมแล้ว — วนกระดานคนละ 3 รอบ แล้วนับเงิน'],
     rngSeed: Math.floor(rng() * 1000000),
   };
@@ -40,11 +40,11 @@ function drawTurnItem(game, rng) {
   const itemId = pick(Object.keys(ITEMS), rng);
   if (p.items.length < MAX_ITEMS) {
     p.items.push(itemId);
-    log(game, `${p.name} เริ่มตาและจั่ว ${ITEMS[itemId].name}`);
+    log(game, `${p.name} เริ่มตาและจั่วการ์ดไอเทม 1 ใบ`);
   } else {
     game.step = 'item_overflow';
     game.pending = { kind: 'item', itemId, source: 'turn' };
-    log(game, `${p.name} เริ่มตาและจั่ว ${ITEMS[itemId].name} แต่การ์ดเต็ม`);
+    log(game, `${p.name} เริ่มตาและจั่วการ์ดไอเทม 1 ใบ แต่การ์ดเต็ม`);
   }
 }
 function endTurn(game, rng) {
@@ -55,7 +55,15 @@ function endTurn(game, rng) {
     log(game, `จบเกม! เงินสูงสุด ${best} เหรียญ`);
     return;
   }
-  do { game.turn = (game.turn + 1) % game.players.length; } while (current(game).done);
+  do {
+    game.turn = (game.turn + 1) % game.players.length;
+    if (!current(game).done && current(game).caveTurns > 0) {
+      current(game).caveTurns--;
+      log(game, `${current(game).name} ติดอยู่ในถ้ำ ข้ามตา (เหลือ ${current(game).caveTurns} ตา)`);
+      continue;
+    }
+    if (!current(game).done) break;
+  } while (true);
   current(game).usedOutside = false;
   game.pending = null; game.battle = null; game.step = 'roll';
   drawTurnItem(game, rng);
@@ -72,7 +80,7 @@ function advanceQuest(game, p, event, rng) {
   p.coins += quest.coins;
   if (quest.reward === 'item') {
     const itemId = pick(Object.keys(ITEMS), rng);
-    if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และ ${ITEMS[itemId].name}`); }
+    if (p.items.length < MAX_ITEMS) { p.items.push(itemId); log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins} เหรียญ และการ์ดไอเทม 1 ใบ`); }
     else { p.coins += 3; log(game, `${p.name} ทำเควสสำเร็จ รับ ${quest.coins + 3} เหรียญ (การ์ดเต็ม)`); }
   } else {
     const species = pick([...POOLS.green, ...POOLS.blue], rng);
@@ -130,22 +138,25 @@ function resolveTile(game, rng) {
     game.pending = { kind: 'quest', questId }; game.step = 'quest_choice';
     log(game, `${p.name} พบเควส ${QUESTS[questId].name}`);
   } else if (tile.type === 'cave') {
-    log(game, `${p.name} หยุดเดินที่ถ้ำ`); endTurn(game, rng);
+    p.caveTurns = 3;
+    game.notice = { id: game.serial++, kind: 'cave', title: 'ติดอยู่ในถ้ำ!', text: `${p.name} ต้องข้าม 3 ตา` };
+    log(game, `${p.name} ลงถ้ำพอดี ต้องข้าม 3 ตา`); endTurn(game, rng);
   } else if (tile.type === 'gym' || tile.type === 'villain') {
     offerNpcBattle(game, rng, tile.type);
   } else if (tile.type === 'item') {
     const itemId = pick(Object.keys(ITEMS), rng);
     if (p.items.length < MAX_ITEMS) {
       p.items.push(itemId);
-      log(game, `${p.name} ได้การ์ด ${ITEMS[itemId].name}`);
+      log(game, `${p.name} ได้การ์ดไอเทม 1 ใบ`);
       endTurn(game, rng);
     } else {
       game.step = 'item_overflow'; game.pending = { kind: 'item', itemId };
-      log(game, `${p.name} ได้ ${ITEMS[itemId].name} แต่ไอเทมเต็ม`);
+      log(game, `${p.name} ได้การ์ดไอเทม 1 ใบ แต่ไอเทมเต็ม`);
     }
   } else if (tile.type === 'event') {
     const event = pick(EVENTS, rng);
     game.pending = { kind: 'event', eventId: event.id };
+    game.notice = { id: game.serial++, kind: 'event', title: event.name, text: event.text, playerId: p.id };
     log(game, `${p.name}: ${event.name} — ${event.text}`);
     if (event.kind === 'coins') p.coins = Math.max(0, p.coins + event.amount);
     if (event.kind === 'balls') p.balls.basic += event.amount;
@@ -156,7 +167,7 @@ function resolveTile(game, rng) {
       else { game.step = 'item_overflow'; game.pending = { kind: 'item', itemId }; return; }
     }
     if (event.kind === 'legendary') { offerLegendary(game, rng); return; }
-    endTurn(game, rng);
+    game.step = 'event_result';
   } else if (tile.type === 'legendary') offerLegendary(game, rng);
   else endTurn(game, rng);
 }
@@ -174,12 +185,14 @@ function battlePower(mon, other, firstAttack) {
 }
 function finishBattle(game, winnerSide, loserSide, rng) {
   const b = game.battle;
+  game.lastBattle = { id: game.serial++, kind: b.kind, winnerSide, loserSide, winnerName: winnerSide === 'wild' ? 'โปเกมอนป่า' : player(game, winnerSide)?.name, loserName: loserSide === 'wild' ? 'โปเกมอนป่า' : player(game, loserSide)?.name };
   const winningMon = getBattleMon(game, winnerSide);
   if (winnerSide !== 'wild' && winningMon && POKEMON[winningMon.species].ability === 'heal') {
     winningMon.hp = Math.min(POKEMON[winningMon.species].hp, winningMon.hp + 1);
   }
   const winner = winnerSide === 'wild' ? null : player(game, winnerSide);
   const loser = loserSide === 'wild' ? null : player(game, loserSide);
+  if (b.kind === 'pvp') game.lastBattle.prize = 3 + (winner?.role === 'rocket' ? 1 : 0);
   if (b.kind === 'pvp') {
     const prize = 3 + (winner?.role === 'rocket' ? 1 : 0);
     winner.coins += prize;
@@ -263,13 +276,8 @@ export function applyAction(game, actorId, action, rng = Math.random) {
   if (action.type === 'roll') {
     if (game.step !== 'roll') return fail('ตอนนี้ยังทอยไม่ได้');
     const value = die(rng), from = p.position;
-    const cave = Array.from({ length: value }, (_, offset) => from + offset + 1).find(index => TILES[index]?.type === 'cave');
-    game.lastRoll = { playerId: p.id, value, from, to: cave ?? (from + value) % 40 };
-    if (cave !== undefined) {
-      p.position = cave;
-      log(game, `${p.name} ทอยได้ ${value} แต่ต้องหยุดที่ถ้ำช่อง ${cave + 1}`);
-      resolveTile(game, rng);
-    } else if (from + value >= TILES.length) {
+    game.lastRoll = { playerId: p.id, value, from, to: (from + value) % 40 };
+    if (from + value >= TILES.length) {
       p.position = 0; p.laps++;
       p.balls.basic += 3;
       game.lastRoll.to = 0;
@@ -346,11 +354,15 @@ export function applyAction(game, actorId, action, rng = Math.random) {
     const success = legendary ? value === 6 : total >= threshold;
     if (success) { p.pokemon.push(makePokemon(game, species, zone)); advanceQuest(game, p, 'catch', rng); }
     game.lastCatch = { playerId: p.id, species, value, total, threshold, success, ball: action.ball };
-    log(game, `${p.name} ทอยจับ ${value}${legendary ? '' : ` (+${total - value})`} — ${success ? `จับ ${POKEMON[species].name} สำเร็จ!` : `${POKEMON[species].name} หนีไป`}`);
-    endTurn(game, rng);
+    log(game, `${p.name} ทอยจับ ${value}${legendary ? '' : ` (+${total - value})`} — ${success ? `จับ ${POKEMON[species].name} สำเร็จ!` : `จับ ${POKEMON[species].name} ไม่สำเร็จ ยังลองใหม่ได้`}`);
+    if (success) endTurn(game, rng);
   } else if (action.type === 'skipCapture') {
     if (game.step !== 'capture') return fail('ตอนนี้ข้ามไม่ได้');
     log(game, `${p.name} ไม่จับโปเกมอน`); endTurn(game, rng);
+  } else if (action.type === 'ackEvent') {
+    if (game.step !== 'event_result') return fail('ไม่มีเหตุการณ์ที่ต้องปิด');
+    game.notice = null;
+    endTurn(game, rng);
   } else if (action.type === 'chooseFighter') {
     if (game.step !== 'battle_pick') return fail('ตอนนี้เลือกตัวสู้ไม่ได้');
     const actor = player(game, actorId);
@@ -372,13 +384,13 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       const entry = BALLS[action.id];
       if (p.coins < entry.price) return fail('เงินไม่พอ');
       p.coins -= entry.price; p.balls[action.id]++;
-      log(game, `${p.name} ซื้อ${entry.name} ราคา ${entry.price}`);
+      log(game, `${p.name} ซื้อโปเกบอล ราคา ${entry.price} เหรียญ`);
     } else if (ITEMS[action.id]) {
       const entry = ITEMS[action.id];
       if (p.items.length >= MAX_ITEMS) return fail('ไอเทมเต็ม 4 ใบ');
       if (p.coins < entry.price) return fail('เงินไม่พอ');
       p.coins -= entry.price; p.items.push(action.id);
-      log(game, `${p.name} ซื้อ${entry.name} ราคา ${entry.price}`);
+      log(game, `${p.name} ซื้อการ์ดไอเทม 1 ใบ ราคา ${entry.price} เหรียญ`);
     } else return fail('ไม่มีของชิ้นนี้');
   } else if (action.type === 'leaveShop') {
     if (game.step !== 'shop') return fail('ตอนนี้ไม่ได้อยู่ในร้าน');
@@ -390,8 +402,8 @@ export function applyAction(game, actorId, action, rng = Math.random) {
       const idx = Number(action.replaceIndex);
       if (!Number.isInteger(idx) || idx < 0 || idx >= p.items.length) return fail('ตำแหน่งไอเทมไม่ถูกต้อง');
       p.items[idx] = game.pending.itemId;
-      log(game, `${p.name} เปลี่ยนการ์ดเป็น ${ITEMS[game.pending.itemId].name}`);
-    } else log(game, `${p.name} ทิ้ง ${ITEMS[game.pending.itemId].name}`);
+      log(game, `${p.name} เปลี่ยนการ์ดไอเทม 1 ใบ`);
+    } else log(game, `${p.name} ทิ้งการ์ดไอเทม 1 ใบ`);
     if (fromTurnDraw) { game.pending = null; game.step = 'roll'; }
     else endTurn(game, rng);
   } else if (action.type === 'useItem') {
@@ -449,6 +461,7 @@ export function actionsForBot(game, rng = Math.random) {
     return { actorId: p.id, action: { type: 'sell', ids: p.pokemon.filter(mon => !keep.includes(mon.uid)).map(mon => mon.uid) } };
   }
   if (game.step === 'wild_choice') return { actorId: p.id, action: { type: 'chooseWild', choice: 'catch' } };
+  if (game.step === 'event_result') return { actorId: p.id, action: { type: 'ackEvent' } };
   if (game.step === 'capture') {
     if (p.pokemon.length >= MAX_POKEMON) return { actorId: p.id, action: { type: 'skipCapture' } };
     const wanted = game.pending.legendary ? ['basic', 'great', 'ultra'] : ['basic', 'great', 'ultra'];

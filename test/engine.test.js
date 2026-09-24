@@ -61,6 +61,8 @@ test('capture uses zone threshold, ball is spent, and a team of six cannot catch
   run(game, p.id, { type: 'throwBall', ball: 'basic' }, 2); // trainer bonus gives 3, below 4
   assert.equal(p.pokemon.length, 1);
   assert.equal(p.balls.basic, 4);
+  assert.equal(game.step, 'capture');
+  assert.equal(game.pending.species, 'charizard');
   game.turn = 0; game.step = 'capture'; game.pending = { kind: 'catch', zone: 'purple', species: 'charizard', legendary: false };
   p.balls.great = 1;
   run(game, p.id, { type: 'throwBall', ball: 'great' }, 2); // +1 ball +1 trainer
@@ -118,7 +120,7 @@ test('encounter pools follow first, second, third and rare categories', () => {
   assert.ok(Object.values(ROLES).every(role => POOLS.green.includes(role.starter)));
 });
 
-test('reference board places special tiles and cave interrupts remaining movement', () => {
+test('cave requires an exact landing and skips three future turns', () => {
   assert.deepEqual([2, 22].map(i => TILES[i].type), ['quest', 'quest']);
   assert.deepEqual([12, 32].map(i => TILES[i].type), ['gym', 'gym']);
   assert.deepEqual([18, 28].map(i => TILES[i].type), ['cave', 'cave']);
@@ -126,9 +128,34 @@ test('reference board places special tiles and cave interrupts remaining movemen
   const game = createGame(people), p = game.players[0];
   p.position = 16;
   run(game, p.id, { type: 'roll' }, 4);
-  assert.equal(p.position, 18);
+  assert.equal(p.position, 20);
   assert.equal(p.laps, 0);
+  game.turn = 0; game.step = 'roll'; p.position = 17;
+  run(game, p.id, { type: 'roll' }, 1);
+  assert.equal(p.position, 18);
+  assert.equal(p.caveTurns, 3);
   assert.equal(game.turn, 1);
+  for (let skipped = 2; skipped >= 0; skipped--) {
+    for (let turn = 1; turn <= 3; turn++) {
+      const other = game.players[turn];
+      game.step = 'capture'; game.pending = { kind: 'catch', zone: 'green', species: 'rattata', legendary: false };
+      run(game, other.id, { type: 'skipCapture' });
+    }
+    assert.equal(p.caveTurns, skipped);
+    assert.equal(game.turn, 1);
+  }
+});
+
+test('random event stays visible until acknowledged', () => {
+  const game = createGame(people), p = game.players[0];
+  p.position = 7;
+  run(game, p.id, { type: 'roll' }, 1);
+  assert.equal(game.step, 'event_result');
+  assert.equal(game.notice.kind, 'event');
+  assert.equal(p.coins, 13);
+  run(game, p.id, { type: 'ackEvent' });
+  assert.equal(game.turn, 1);
+  assert.equal(game.notice, null);
 });
 
 test('quest acceptance, completion reward and abandonment', () => {

@@ -49,7 +49,17 @@ function lobbyView(room) {
 }
 function broadcast(room) {
   const state = room.game || lobbyView(room);
-  for (const p of room.participants) send(p.ws, { type: 'state', code: room.code, state });
+  for (const p of room.participants) {
+    if (!p.ws) continue;
+    if (!room.game) { send(p.ws, { type: 'state', code: room.code, state }); continue; }
+    const view = structuredClone(state);
+    for (const other of view.players) if (other.id !== p.id) {
+      other.itemCount = other.items.length;
+      other.items = [];
+    }
+    if (view.pending?.itemId && view.players[view.turn]?.id !== p.id) delete view.pending.itemId;
+    send(p.ws, { type: 'state', code: room.code, state: view });
+  }
 }
 function addParticipant(room, name, bot = false) {
   const p = {

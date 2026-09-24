@@ -6,6 +6,7 @@ import './encounter.css';
 import './roll.css';
 import './game-layout.css';
 import './battle.css';
+import './announcement.css';
 import { createBoard } from './board.js';
 import { BALLS, EVOLUTIONS, ITEMS, POKEMON, QUESTS, ROLES, ZONES } from './game/data.js';
 import { badgeRequirement } from './game/engine.js';
@@ -20,12 +21,11 @@ const params = new URLSearchParams(location.search);
 let remembered = JSON.parse(localStorage.getItem('pokemon-board-session') || 'null');
 if (params.get('room') && params.get('room').toUpperCase() !== remembered?.code) remembered = null;
 let name = localStorage.getItem('pokemon-board-name') || '';
-let previousSceneMessage = '';
-let fxTimer;
 let suspense = null;
 let arrivalPending = false;
 let openDetails = null;
 let heartbeatTimer;
+let dismissedAnnouncementId = 0;
 
 function waitForArrival() {
   if (!arrivalPending) return;
@@ -34,10 +34,8 @@ function waitForArrival() {
   render();
 }
 
-function applyState(next, roomCode, effects = true) {
-  const before = state;
+function applyState(next, roomCode) {
   state = next; code = roomCode; selectedSale.clear(); board.sync(state); render();
-  if (effects) showStateFx(before, state);
 }
 function suspenseValue(next, kind) {
   if (kind === 'catch') return next.lastCatch?.playerId === playerId ? next.lastCatch.value : null;
@@ -64,7 +62,7 @@ function finishSuspense() {
   $('rollOverlay').innerHTML = '';
   if (latest) {
     arrivalPending = kind === 'move' && latest.state.step === 'capture' && latest.state.players[latest.state.turn]?.id === playerId;
-    applyState(latest.state, latest.code, false);
+    applyState(latest.state, latest.code);
     if (arrivalPending) requestAnimationFrame(waitForArrival);
   }
 }
@@ -99,33 +97,6 @@ function queueSuspenseState(next, roomCode) {
   suspense.revealing = true;
   const elapsed = performance.now() - suspense.started;
   suspense.timer = setTimeout(revealSuspense, Math.max(0, 1150 - elapsed));
-}
-
-function showFx(kind, title, detail = '') {
-  const layer = $('worldFx');
-  layer.innerHTML = `<div class="fx-card fx-${kind}"><strong>${esc(title)}</strong><span>${esc(detail)}</span></div>`;
-  clearTimeout(fxTimer);
-  fxTimer = setTimeout(() => { layer.innerHTML = ''; }, 1500);
-}
-function showStateFx(before, after) {
-  if (!before || before.phase !== 'playing' || after.phase !== 'playing') return;
-  if (after.lastCatch && JSON.stringify(before.lastCatch) !== JSON.stringify(after.lastCatch)) {
-    const result = after.lastCatch;
-    showFx(result.success ? 'catch' : 'miss', result.success ? 'จับสำเร็จ!' : 'จับไม่สำเร็จ', `${POKEMON[result.species].name} · 🎲 ${result.value}`);
-    return;
-  }
-  if (after.lastRoll && JSON.stringify(before.lastRoll) !== JSON.stringify(after.lastRoll)) {
-    const rolled = after.players.find(p => p.id === after.lastRoll.playerId);
-    showFx('dice', `🎲 ${after.lastRoll.value}`, `${rolled?.name || 'ผู้เล่น'} ทอยเต๋า`);
-    return;
-  }
-  if (after.log?.[0] !== before.log?.[0]) {
-    const line = after.log[0];
-    if (line.includes('โจมตี')) showFx('battle', 'โจมตี!', line);
-    else if (line.includes('ชนะ')) showFx('battle', 'ชนะการต่อสู้!', line);
-    else if (line.includes('ขาย')) showFx('sale', 'ขายโปเกมอน', line);
-    else if (line.includes('ถึงเมือง')) showFx('city', 'ฟื้น HP ทั้งทีม', line);
-  }
 }
 
 function send(type, extra = {}) { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type, ...extra })); else toast('ยังไม่เชื่อมต่อเซิร์ฟเวอร์'); }
@@ -173,8 +144,9 @@ function itemList(me, battle = false) {
   }).join('') : '<p class="muted">ยังไม่มีการ์ดไอเทม</p>';
 }
 function captureModalHtml() {
-  if (arrivalPending || state?.phase !== 'playing' || state.step !== 'capture' || state.players[state.turn]?.id !== playerId) return '';
+  if (arrivalPending || state?.phase !== 'playing' || state.step !== 'capture') return '';
   const me = state.players[state.turn];
+  const spectating = me?.id !== playerId;
   const encounter = state.pending;
   const pokemon = POKEMON[encounter.species];
   const legendary = encounter.legendary;
@@ -182,15 +154,28 @@ function captureModalHtml() {
   const full = me.pokemon.length >= 6;
   const zoneColor = { green: '#38b85f', blue: '#37b1df', purple: '#9c5add', red: '#e64d66' }[encounter.zone] || '#edbf4c';
   return `<div class="encounter-shade"><section class="encounter-card" role="dialog" aria-modal="true" aria-label="จับ${esc(pokemon.name)}" style="--encounter-color:${zoneColor}">
-    <div class="encounter-topline"><span>${legendary ? '✦ LEGENDARY' : 'WILD POKÉMON'}</span><span>${legendary ? 'ช่องทอง' : esc(ZONES[encounter.zone].name)} · ทีม ${me.pokemon.length}/6</span></div>
+    <div class="encounter-topline"><span>${legendary ? '✦ LEGENDARY' : 'WILD POKÉMON'}</span><span>${spectating ? `${esc(me.name)} พบโปเกมอน` : legendary ? 'ช่องทอง' : esc(ZONES[encounter.zone].name)} · ทีม ${me.pokemon.length}/6</span></div>
     <div class="encounter-art-panel">${pokemonPortrait(encounter.species, 'large')}<div class="encounter-spark spark-one">✦</div><div class="encounter-spark spark-two">✦</div></div>
     <div class="encounter-name"><h2>${esc(pokemon.name)}</h2><span>#${String(POKEDEX[encounter.species]).padStart(3, '0')}</span></div>
     <div class="encounter-stats"><span><b>HP</b> ${pokemon.hp}</span><span><b>⚔ พลังโจมตี</b> ${pokemon.power}</span><span><b>◉ ขาย</b> ${pokemon.price} เหรียญ</span></div>
     <p class="encounter-rule">${legendary ? 'ชนะการต่อสู้ก่อน แล้วทอยได้ 6 เท่านั้น · โบนัสบอลไม่มีผล' : `ทอยได้ ${threshold} ขึ้นไปเพื่อจับ ${esc(pokemon.name)} · โบนัสบอลช่วยเพิ่มแต้ม`} </p>
     ${full ? '<p class="encounter-full">ทีมเต็ม 6 ตัวแล้ว จับเพิ่มไม่ได้</p>' : ''}
-    <div class="encounter-ball-grid">${Object.entries(BALLS).map(([id, ball]) => `<button class="btn encounter-ball" data-ball="${id}" ${me.balls[id] < 1 || full ? 'disabled' : ''}><span class="ball-symbol ball-${id}">◉</span><strong>${esc(ball.name)}</strong><small>มี ${me.balls[id]} ลูก ${legendary ? '' : `· โบนัส +${ball.bonus}`}</small></button>`).join('')}</div>
-    <button class="btn encounter-skip" data-act="skipCapture">ไม่จับ · จบตา</button>
+    ${spectating ? `<p class="waiting">รอ ${esc(me.name)} จับหรือออกจากการจับ…</p>` : `<div class="encounter-ball-grid">${Object.entries(BALLS).map(([id, ball]) => `<button class="btn encounter-ball" data-ball="${id}" ${me.balls[id] < 1 || full ? 'disabled' : ''}><span class="ball-symbol ball-${id}">◉</span><strong>${esc(ball.name)}</strong><small>มี ${me.balls[id]} ลูก ${legendary ? '' : `· โบนัส +${ball.bonus}`}</small></button>`).join('')}</div><button class="btn encounter-skip" data-act="skipCapture">ออกจากการจับ · จบตา</button>`}
   </section></div>`;
+}
+function announcementHtml() {
+  if (!state || state.phase !== 'playing') return '';
+  const battle = state.lastBattle;
+  const notice = state.notice;
+  const announcement = [battle && battle.id > dismissedAnnouncementId ? { ...battle, type: 'battle' } : null, notice && notice.id > dismissedAnnouncementId ? { ...notice, type: 'notice' } : null].filter(Boolean).sort((a, b) => b.id - a.id)[0];
+  if (!announcement) return '';
+  const isBattle = announcement.type === 'battle';
+  const won = isBattle && announcement.winnerSide === playerId;
+  const lost = isBattle && announcement.loserSide === playerId;
+  const title = isBattle ? won ? 'ชนะการต่อสู้!' : lost ? 'แพ้การต่อสู้' : `${announcement.winnerName} ชนะ!` : announcement.title;
+  const detail = isBattle ? `${announcement.winnerName} ชนะ ${announcement.loserName}${announcement.kind === 'pvp' ? ` · ผู้ชนะได้เงิน ${announcement.prize} เหรียญ` : ''}` : announcement.text;
+  const canAck = !isBattle && announcement.kind === 'event' && state.step === 'event_result' && state.players[state.turn]?.id === playerId;
+  return `<div class="announcement-shade"><section class="announcement-card ${isBattle ? won ? 'announcement-win' : lost ? 'announcement-lose' : '' : `announcement-${announcement.kind}`}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="eyebrow">${isBattle ? 'BATTLE RESULT' : announcement.kind === 'event' ? 'RANDOM EVENT' : 'BOARD EVENT'}</div><div class="announcement-icon">${isBattle ? won ? '🏆' : lost ? '⚔' : '🏅' : announcement.kind === 'event' ? '✦' : '◆'}</div><h2>${esc(title)}</h2><p>${esc(detail)}</p><button class="btn primary block" data-ui="dismiss-announcement" ${canAck ? 'data-act="ackEvent"' : ''}>รับทราบ</button></section></div>`;
 }
 function actionHtml() {
   const me = state.players.find(p => p.id === playerId);
@@ -216,6 +201,7 @@ function actionHtml() {
     body = `<p>ถึงจุดเริ่มต้น · รอบ ${me.laps}/3 เลือกตัวที่จะขาย ${me.laps < 3 ? '(ต้องเหลืออย่างน้อย 1 ตัว)' : '(ขายได้ทั้งหมด)'}</p><div class="monster-grid">${me.pokemon.map(mon => monCard(mon, true)).join('')}</div><div class="button-row"><button class="btn gold" data-act="sell">ขายที่เลือก +${earned} เหรียญ</button><button class="btn" data-ui="skip-sale">ไม่ขาย</button></div>`;
   } else if (state.step === 'wild_choice') body = `<p>มี ${esc(state.players.find(other => other.id === state.pending.opponentId)?.name)} อยู่บนช่องมอนสเตอร์ป่า คุณเลือกจับหรือท้าสู้ได้ อีกฝ่ายปฏิเสธการสู้ไม่ได้</p><div class="button-row"><button class="btn primary" data-choice="catch">จับมอนสเตอร์ป่า</button><button class="btn red" data-choice="battle">ท้าสู้ · ชนะ +3</button></div>`;
   else if (state.step === 'capture') body = arrivalPending ? '<p class="waiting">กำลังเดินไปยังช่องโปเกมอน…</p>' : '<p class="waiting">การ์ดจับโปเกมอนเปิดอยู่กลางจอ</p>';
+  else if (state.step === 'event_result') body = `<p>เหตุการณ์: ${esc(state.notice?.title || '')}</p><button class="btn primary block" data-act="ackEvent">รับทราบ · จบตา</button>`;
 else if (state.step === 'shop') body = `<p>เมืองฟื้น HP ให้ทั้งทีมแล้ว ซื้อบอลหรือการ์ดได้ตามต้องการ</p><div class="shop-grid">${Object.entries(BALLS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price ? 'disabled' : ''}>◉ ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><div class="mini-section">การ์ดไอเทม · ${me.items.length}/4</div><div class="shop-grid">${Object.entries(ITEMS).map(([id, item]) => `<button class="btn shop-entry" data-buy="${id}" ${me.coins < item.price || me.items.length >= 4 ? 'disabled' : ''}>${item.icon} ${item.name}<br>${item.price} เหรียญ</button>`).join('')}</div><button class="btn primary block" data-act="leaveShop">ออกจากเมือง</button>`;
   else if (state.step === 'quest_choice') {
     const quest = QUESTS[state.pending.questId];
@@ -265,6 +251,7 @@ function render() {
   $('battleOverlay').innerHTML = battleOverlayHtml();
   board.setInteractive(Boolean(state && state.phase !== 'lobby' && state.step !== 'capture'));
   $('encounterOverlay').innerHTML = captureModalHtml();
+  $('announcementOverlay').innerHTML = announcementHtml();
   $('playerHud').innerHTML = state?.phase === 'playing' || state?.phase === 'finished' ? playerHudHtml() : '';
   if (state?.phase === 'lobby') { $('overlay').innerHTML = lobbyHtml(); $('actionDock').innerHTML = ''; $('itemDock').innerHTML = ''; $('detailsDock').innerHTML = ''; }
   else if (!state) { $('overlay').innerHTML = landingHtml(); $('actionDock').innerHTML = ''; $('itemDock').innerHTML = ''; $('detailsDock').innerHTML = ''; }
@@ -277,9 +264,6 @@ function render() {
     $('itemDock').innerHTML = itemDockHtml();
     $('itemDock').className = `hand-size-${Math.max(1, Math.min(4, state.players.find(p => p.id === playerId)?.items.length || 0))}`;
     $('detailsDock').innerHTML = detailsDockHtml();
-    const line = arrivalPending ? 'กำลังเดินไปยังช่องโปเกมอน…' : state.phase === 'finished' ? 'จบเกม · เงินมากที่สุดชนะ' : state.log[0];
-    $('sceneMessage').textContent = line;
-    if (line !== previousSceneMessage) { $('sceneMessage').classList.remove('new-message'); void $('sceneMessage').offsetWidth; $('sceneMessage').classList.add('new-message'); previousSceneMessage = line; }
   }
 }
 document.addEventListener('click', event => {
@@ -303,6 +287,7 @@ document.addEventListener('click', event => {
   else if (ui === 'start') send('start');
   else if (ui === 'team' || ui === 'log' || ui === 'quest') { openDetails = openDetails === ui ? null : ui; render(); }
   else if (ui === 'new') { localStorage.removeItem('pokemon-board-session'); location.href = location.pathname; }
+  else if (ui === 'dismiss-announcement') { dismissedAnnouncementId = Math.max(dismissedAnnouncementId, state?.lastBattle?.id || 0, state?.notice?.id || 0); render(); }
   else if (ui === 'skip-sale') act({ type: 'sell', ids: [] });
   if (button.dataset.role) send('role', { role: button.dataset.role });
   if (button.dataset.act) act({ type: button.dataset.act, ...(button.dataset.act === 'sell' ? { ids: [...selectedSale] } : {}) });
