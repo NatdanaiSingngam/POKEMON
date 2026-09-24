@@ -38,7 +38,7 @@ let announcementTimer = null;
 let seenAnnouncementId = 0;
 let moveGauge = null;
 function gaugeValue(now) {
-  const phase = ((now - moveGauge.started) % 2400) / 1200;
+  const phase = ((now - moveGauge.started) % 900) / 450;
   return phase <= 1 ? phase : 2 - phase;
 }
 function paintGauge() {
